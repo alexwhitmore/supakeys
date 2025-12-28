@@ -1,0 +1,48 @@
+{
+  "name": "@alexwhitmore/supakeys-cli",
+  "version": "0.1.0",
+  "description": "CLI tool for setting up passkey authentication with Supabase",
+  "author": "Alex Whitmore",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alexwhitmore/supakeys",
+    "directory": "packages/cli"
+  },
+  "keywords": [
+    "supabase",
+    "passkeys",
+    "webauthn",
+    "cli",
+    "authentication"
+  ],
+  "type": "module",
+  "bin": {
+    "supakeys": "./dist/index.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "templates",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "commander": "^11.1.0",
+    "enquirer": "^2.4.1",
+    "ora": "^7.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.0"
+  }
+}

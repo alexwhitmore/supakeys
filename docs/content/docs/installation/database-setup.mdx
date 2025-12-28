@@ -1,0 +1,103 @@
+---
+title: Database Setup
+description: The passkey authentication system requires several database tables to store credentials, challenges, and audit logs.
+---
+
+## Tables Created
+
+The CLI creates the following tables in your Supabase database:
+
+### `passkey_credentials`
+
+Stores the WebAuthn credentials for each user:
+
+| Column               | Type          | Description                       |
+| -------------------- | ------------- | --------------------------------- |
+| `id`                 | `text`        | Primary key (credential ID)       |
+| `user_id`            | `uuid`        | Reference to auth.users           |
+| `public_key`         | `bytea`       | Public key bytes                  |
+| `webauthn_user_id`   | `text`        | WebAuthn user handle              |
+| `counter`            | `bigint`      | Signature counter                 |
+| `device_type`        | `text`        | 'singleDevice' or 'multiDevice'   |
+| `backed_up`          | `boolean`     | If synced to cloud                |
+| `transports`         | `text[]`      | Available transports              |
+| `aaguid`             | `text`        | Authenticator AAGUID              |
+| `authenticator_name` | `text`        | User-defined name                 |
+| `created_at`         | `timestamptz` | Creation timestamp                |
+| `last_used_at`       | `timestamptz` | Last authentication               |
+
+### `passkey_challenges`
+
+Stores pending authentication challenges:
+
+| Column            | Type          | Description                       |
+| ----------------- | ------------- | --------------------------------- |
+| `id`              | `uuid`        | Primary key                       |
+| `challenge`       | `text`        | Challenge string                  |
+| `user_id`         | `uuid`        | Associated user (nullable)        |
+| `type`            | `text`        | 'registration' or 'authentication'|
+| `expires_at`      | `timestamptz` | Expiration time (5 min TTL)       |
+| `created_at`      | `timestamptz` | Creation timestamp                |
+
+### `passkey_audit_log`
+
+Records all authentication events:
+
+| Column       | Type          | Description         |
+| ------------ | ------------- | ------------------- |
+| `id`         | `uuid`        | Primary key         |
+| `user_id`    | `uuid`        | Associated user     |
+| `event_type` | `text`        | Event name          |
+| `ip_address` | `inet`        | Client IP           |
+| `user_agent` | `text`        | Browser user agent  |
+| `metadata`   | `jsonb`       | Additional data     |
+| `created_at` | `timestamptz` | Event timestamp     |
+
+### `passkey_rate_limits`
+
+Tracks rate limiting by IP and email:
+
+| Column         | Type          | Description       |
+| -------------- | ------------- | ----------------- |
+| `id`           | `uuid`        | Primary key       |
+| `identifier`   | `text`        | Rate limit key    |
+| `attempt_count`| `integer`     | Request count     |
+| `window_start` | `timestamptz` | Window start time |
+
+## Row Level Security
+
+All tables have RLS enabled with appropriate policies:
+
+- **passkey_credentials**: Users can only see their own credentials
+- **passkey_challenges**: Only accessible by the edge function (service role)
+- **passkey_audit_log**: Users can only see their own audit entries
+- **passkey_rate_limits**: Only accessible by the edge function (service role)
+
+## Manual Setup
+
+If you prefer to run the migration manually instead of using the CLI:
+
+```sql
+create table passkey_credentials (
+  id text primary key,
+  user_id uuid references auth.users(id) on delete cascade not null,
+  public_key bytea not null,
+  webauthn_user_id text not null,
+  counter bigint not null default 0,
+  device_type text not null,
+  backed_up boolean not null default false,
+  transports text[] not null default '{}',
+  aaguid text,
+  authenticator_name text,
+  created_at timestamptz not null default now(),
+  last_used_at timestamptz
+);
+
+alter table passkey_credentials enable row level security;
+
+create policy "Users can view own credentials"
+  on passkey_credentials for select
+  using (auth.uid() = user_id);
+```
+
+See the full migration in your `supabase/migrations` folder after running `init`.

@@ -1,0 +1,239 @@
+---
+title: Best Practices
+description: Security recommendations for passkey implementation
+---
+
+## Deployment
+
+### Use HTTPS Everywhere
+
+WebAuthn requires a secure context:
+
+- Production must use HTTPS
+- Ensure TLS 1.2+ with strong ciphers
+- Enable HSTS for your domain
+
+### Configure RP ID Correctly
+
+```typescript
+const passkeys = createPasskeyAuth(supabase, {
+  rpId: 'example.com', // Match your production domain
+  rpName: 'My App',
+})
+```
+
+- Use your exact domain as RP ID
+- Subdomains can use parent domain (app.example.com can use example.com)
+- Never use localhost in production
+
+### Protect Edge Function
+
+Supabase Edge Functions should:
+
+- Use service role for database operations
+- Never expose service role key to clients
+- Validate all input data
+
+## User Experience
+
+### Provide Fallback Authentication
+
+Not all users can use passkeys:
+
+```typescript
+const support = await getPasskeySupport()
+
+if (!support.webauthn) {
+  showPasswordLogin()
+} else {
+  showPasskeyLogin()
+}
+```
+
+### Encourage Multiple Passkeys
+
+Users should register multiple passkeys:
+
+- Different devices (phone, laptop)
+- Backup security key
+- Prevents lockout if device is lost
+
+```tsx
+function PasskeyPrompt({ passkeyCount }) {
+  if (passkeyCount === 1) {
+    return <Banner>Add a backup passkey to avoid being locked out</Banner>
+  }
+  return null
+}
+```
+
+### Name Passkeys Clearly
+
+Help users identify their passkeys:
+
+```typescript
+const result = await passkeys.linkPasskey({
+  authenticatorName: `${browserName} on ${osName}`,
+})
+```
+
+## Error Handling
+
+### Don't Leak User Information
+
+```typescript
+// Bad - reveals if email exists
+if (error.code === 'USER_NOT_FOUND') {
+  showError('No account with this email')
+}
+
+// Good - generic message
+if (error.code === 'USER_NOT_FOUND' || error.code === 'VERIFICATION_FAILED') {
+  showError('Authentication failed. Please try again.')
+}
+```
+
+### Log Errors Server-Side
+
+```typescript
+if (!result.success) {
+  // Log full details server-side
+  await logAuthError({
+    code: result.error.code,
+    email: userEmail,
+    ip: clientIP,
+    timestamp: new Date(),
+  })
+
+  // Show generic message to user
+  showError('Authentication failed')
+}
+```
+
+## Session Management
+
+### Validate Sessions Server-Side
+
+Always verify the session on protected routes:
+
+```typescript
+// Server-side (Next.js API route)
+export async function GET(request: Request) {
+  const supabase = createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return new Response('Unauthorized', { status: 401 })
+  }
+
+  // Continue with authenticated user
+}
+```
+
+### Handle Session Expiry
+
+```typescript
+supabase.auth.onAuthStateChange((event, session) => {
+  if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
+    // Update UI accordingly
+  }
+})
+```
+
+## Rate Limiting
+
+### Don't Disable Rate Limits
+
+The default limits protect against abuse:
+
+- 5 requests/minute per IP
+- 10 requests/minute per email
+
+### Handle Rate Limit Errors
+
+```typescript
+if (result.error.code === 'RATE_LIMITED') {
+  showError('Too many attempts. Please wait a minute.')
+  disableButton(60000) // Disable for 1 minute
+}
+```
+
+## Monitoring
+
+### Monitor Authentication Patterns
+
+Watch for:
+
+- Sudden spikes in failed authentications
+- Multiple IPs trying same email
+- Unusual geographic patterns
+- High rate limit hits
+
+### Set Up Alerts
+
+```sql
+-- Example: Alert on high failure rate
+CREATE OR REPLACE FUNCTION check_auth_failures()
+RETURNS trigger AS $$
+BEGIN
+  IF (
+    SELECT COUNT(*)
+    FROM passkey_audit_log
+    WHERE event_type = 'authentication_failed'
+    AND created_at > NOW() - INTERVAL '5 minutes'
+  ) > 100 THEN
+    -- Trigger alert (webhook, email, etc.)
+    PERFORM notify_admin('High auth failure rate');
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+## Passkey Lifecycle
+
+### Remove Unused Passkeys
+
+Prompt users to review passkeys that haven't been used:
+
+```typescript
+const result = await passkeys.listPasskeys()
+const stalePasskeys = result.passkeys.filter(
+  (pk) => pk.lastUsedAt && new Date(pk.lastUsedAt) < Date.now() - 90 * 24 * 60 * 60 * 1000 // 90 days
+)
+
+if (stalePasskeys.length > 0) {
+  showPrompt("You have passkeys that haven't been used in 90 days")
+}
+```
+
+### Audit Passkey Changes
+
+Log when users add or remove passkeys:
+
+```typescript
+async function handleRemovePasskey(id: string) {
+  const result = await passkeys.removePasskey({ credentialId: id })
+
+  if (result.success) {
+    await logSecurityEvent('passkey_removed', { credentialId: id })
+    sendSecurityEmail(user.email, 'A passkey was removed from your account')
+  }
+}
+```
+
+## Checklist
+
+Before going to production:
+
+- [ ] HTTPS enabled with valid certificate
+- [ ] RP ID matches production domain
+- [ ] Rate limiting enabled
+- [ ] Error messages don't leak user info
+- [ ] Audit logging enabled
+- [ ] Session validation on all protected routes
+- [ ] Fallback authentication available
+- [ ] Users encouraged to add backup passkeys
+- [ ] Security alerts configured

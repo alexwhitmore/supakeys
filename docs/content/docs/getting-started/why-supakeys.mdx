@@ -1,0 +1,60 @@
+---
+title: Why Supakeys?
+description: There are many ways to implement passkey authentication. Here's why Supakeys is a great choice for Supabase projects.
+---
+
+## Designed for Supabase
+
+- **Native Integration**: Works directly with Supabase Auth and Edge Functions
+- **RLS Compatible**: All passkey data is protected by Row Level Security
+- **Session Management**: Creates standard Supabase sessions on successful authentication
+- **No External Services**: Everything runs in your Supabase project
+
+## Security First
+
+- **WebAuthn Spec Compliant**: Built on the official [WebAuthn standard](https://www.w3.org/TR/webauthn-2/)
+- **SimpleWebAuthn**: Uses the battle-tested [SimpleWebAuthn](https://simplewebauthn.dev/) library
+- **Challenge TTL**: Challenges expire after 5 minutes
+- **Single-Use Challenges**: Each challenge can only be used once
+- **Rate Limiting**: Built-in protection against brute force attacks
+- **Audit Logging**: All authentication events are logged
+
+## Developer Experience
+
+- **TypeScript First**: Full type definitions included
+- **Simple API**: Just a few methods to learn
+- **CLI Tool**: Set up your project in minutes
+- **Comprehensive Errors**: Detailed error codes for debugging
+
+## Quick Comparison
+
+| Feature                 | Supakeys        | DIY WebAuthn      |
+| ----------------------- | --------------- | ----------------- |
+| Setup Time              | Minutes         | Days              |
+| Supabase Integration    | Built-in        | Manual            |
+| Security Best Practices | Included        | Research Required |
+| TypeScript Types        | Full Coverage   | Manual            |
+| Maintenance             | Library Updates | You               |
+
+## What You Get
+
+### Client Package (`supakeys`)
+
+- `PasskeyAuth` class for all authentication operations
+- Support detection utilities
+- Error handling helpers
+- Full TypeScript types
+
+### CLI Tool (`supakeys`)
+
+- Database migration generation
+- Edge function scaffolding
+- Framework detection
+- Dry-run mode
+
+### Edge Function
+
+- Registration and authentication flows
+- Passkey management (list, update, remove)
+- Rate limiting
+- Challenge lifecycle management

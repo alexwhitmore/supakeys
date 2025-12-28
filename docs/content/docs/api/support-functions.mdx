@@ -1,0 +1,168 @@
+---
+title: Support Functions
+description: These utility functions help you check WebAuthn support before attempting passkey operations.
+---
+
+## getPasskeySupport()
+
+Check all aspects of passkey support at once.
+
+```typescript
+import { getPasskeySupport } from 'supakeys'
+
+const support = await getPasskeySupport()
+
+console.log({
+  webauthn: support.webauthn, // Basic WebAuthn support
+  platformAuthenticator: support.platformAuthenticator, // Built-in authenticator
+  conditionalUI: support.conditionalUI, // Autofill UI support
+})
+```
+
+**Returns:** `Promise<PasskeySupport>`
+
+```typescript
+interface PasskeySupport {
+  webauthn: boolean
+  platformAuthenticator: boolean
+  conditionalUI: boolean
+}
+```
+
+---
+
+## isWebAuthnSupported()
+
+Check if WebAuthn is supported in the current browser.
+
+```typescript
+import { isWebAuthnSupported } from 'supakeys'
+
+if (isWebAuthnSupported()) {
+  // Safe to use passkeys
+} else {
+  // Show password fallback
+}
+```
+
+**Returns:** `boolean`
+
+This checks:
+
+- `window.PublicKeyCredential` exists
+- Running in a secure context (HTTPS or localhost)
+
+---
+
+## isPlatformAuthenticatorAvailable()
+
+Check if the device has a built-in authenticator (Touch ID, Face ID, Windows Hello).
+
+```typescript
+import { isPlatformAuthenticatorAvailable } from 'supakeys'
+
+const available = await isPlatformAuthenticatorAvailable()
+
+if (available) {
+  // Can use Touch ID, Face ID, etc.
+} else {
+  // May need security key
+}
+```
+
+**Returns:** `Promise<boolean>`
+
+---
+
+## isConditionalUISupported()
+
+Check if the browser supports conditional UI (passkey autofill).
+
+```typescript
+import { isConditionalUISupported } from 'supakeys'
+
+const supported = await isConditionalUISupported()
+
+if (supported) {
+  // Can show passkeys in autofill dropdown
+}
+```
+
+**Returns:** `Promise<boolean>`
+
+Conditional UI allows passkeys to appear in the browser's autofill dropdown, similar to saved passwords.
+
+---
+
+## isSecureContext()
+
+Check if the page is running in a secure context.
+
+```typescript
+import { isSecureContext } from 'supakeys'
+
+if (!isSecureContext()) {
+  console.warn('WebAuthn requires HTTPS')
+}
+```
+
+**Returns:** `boolean`
+
+WebAuthn requires either:
+
+- HTTPS connection
+- `localhost` (for development)
+
+---
+
+## getUnsupportedReason()
+
+Get a human-readable reason if passkeys aren't supported.
+
+```typescript
+import { getUnsupportedReason } from 'supakeys'
+
+const reason = getUnsupportedReason()
+
+if (reason) {
+  console.log('Not supported:', reason)
+  // "WebAuthn requires a secure context (HTTPS)"
+  // "WebAuthn is not supported in this browser"
+}
+```
+
+**Returns:** `string | null`
+
+Returns `null` if passkeys are supported.
+
+## Usage Example
+
+```typescript
+import { getPasskeySupport, getUnsupportedReason } from 'supakeys'
+
+async function checkSupport() {
+  const reason = getUnsupportedReason()
+  if (reason) {
+    return { supported: false, reason }
+  }
+
+  const support = await getPasskeySupport()
+
+  return {
+    supported: true,
+    hasPlatformAuthenticator: support.platformAuthenticator,
+    hasConditionalUI: support.conditionalUI,
+  }
+}
+
+// In your component
+const support = await checkSupport()
+
+if (!support.supported) {
+  showFallbackAuth(support.reason)
+} else if (!support.hasPlatformAuthenticator) {
+  showSecurityKeyPrompt()
+} else {
+  showPasskeyButton()
+}
+```

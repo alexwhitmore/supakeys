@@ -1,0 +1,59 @@
+---
+title: What are Passkeys?
+description: Passkeys are a modern replacement for passwords, built on the WebAuthn standard developed by the FIDO Alliance and W3C. They provide a more secure and user-friendly way to authenticate.
+---
+
+## How Passkeys Work
+
+Instead of typing a password, passkeys use public-key cryptography:
+
+1. **Registration**: A unique key pair is created on your device. The private key never leaves your device. The public key is stored on the server.
+
+2. **Authentication**: When you sign in, your device proves it has the private key by signing a challenge. No secret is ever transmitted over the network.
+
+## Why Passkeys are Better
+
+### Security Benefits
+
+- **Phishing Resistant**: Passkeys are bound to specific domains. They can't be phished because they won't work on fake websites.
+- **No Shared Secrets**: Unlike passwords, the private key never leaves your device. There's nothing to steal from a server breach.
+- **No Password Reuse**: Each passkey is unique to each service.
+- **Built-in 2FA**: Passkeys require both possession (your device) and verification (biometrics or PIN).
+
+### User Experience Benefits
+
+- **No Passwords to Remember**: Sign in with a fingerprint, face, or device PIN.
+- **Faster Sign-in**: Authentication takes seconds, not the time to type a complex password.
+- **Cross-Device Sync**: Passkeys sync across your devices via iCloud Keychain, Google Password Manager, or other providers.
+
+## Device Support
+
+Passkeys are supported on:
+
+| Platform       | Support                   |
+| -------------- | ------------------------- |
+| iOS 16+        | Touch ID, Face ID         |
+| macOS Ventura+ | Touch ID, iCloud Keychain |
+| Android 9+     | Fingerprint, Face Unlock  |
+| Windows 10+    | Windows Hello             |
+| Chrome 109+    | Cross-platform            |
+| Safari 16+     | Full support              |
+| Firefox 122+   | Full support              |
+
+## Passkey Types
+
+### Platform Authenticators (Synced Passkeys)
+
+Built into your device's operating system. These sync across devices:
+
+- iCloud Keychain (Apple devices)
+- Google Password Manager (Android/Chrome)
+- Windows Hello
+
+### Roaming Authenticators (Security Keys)
+
+Physical hardware keys that work across devices:
+
+- YubiKey
+- Google Titan Key
+- Feitian keys

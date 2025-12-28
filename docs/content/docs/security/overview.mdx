@@ -1,0 +1,148 @@
+---
+title: Security Overview
+description: How supakeys implements multiple layers of security to protect the authentication flow.
+---
+
+## WebAuthn Security Model
+
+### Public Key Cryptography
+
+Passkeys use asymmetric cryptography:
+
+- **Private key** stays on the user's device, never transmitted
+- **Public key** stored on the server, useless without the private key
+- Authentication proves possession without revealing secrets
+
+### Origin Binding
+
+Passkeys are bound to specific domains:
+
+- Cannot be used on phishing sites
+- RP ID must match the requesting origin
+- Subdomains must be explicitly allowed
+
+### User Verification
+
+Every operation requires user verification:
+
+- Biometric (fingerprint, face)
+- Device PIN/password
+- Hardware security key button
+
+## Challenge Security
+
+### Cryptographic Randomness
+
+```
+Challenge = 32 bytes of crypto-random data (Base64-encoded)
+```
+
+Challenges are generated using cryptographically secure random number generators.
+
+### Time-to-Live (TTL)
+
+| Property   | Value     |
+| ---------- | --------- |
+| TTL        | 5 minutes |
+| Single use | Yes       |
+| Type bound | Yes       |
+
+Challenges expire after 5 minutes and can only be used once.
+
+### Type Validation
+
+Challenges are bound to operation type:
+
+- Registration challenges only work for registration
+- Authentication challenges only work for authentication
+- Prevents challenge reuse across operations
+
+## Rate Limiting
+
+Protection against brute force attacks:
+
+| Limit     | Threshold   | Window   |
+| --------- | ----------- | -------- |
+| Per IP    | 5 requests  | 1 minute |
+| Per email | 10 requests | 1 minute |
+
+Rate limits reset after the window expires.
+
+## Credential Storage
+
+### Database Schema
+
+| Data          | Storage       | Protection |
+| ------------- | ------------- | ---------- |
+| Public key    | BYTEA column  | RLS        |
+| Credential ID | TEXT column   | RLS        |
+| Counter       | BIGINT column | RLS        |
+
+### Row Level Security
+
+All passkey tables have RLS enabled:
+
+- Users can only see their own credentials
+- Service role required for administrative operations
+- Edge function uses service role for verification
+
+## Session Creation
+
+After successful authentication:
+
+1. Edge function verifies the credential
+2. Creates a one-time token using Supabase Admin API
+3. Client exchanges token for session
+4. Standard Supabase session (JWT) returned
+
+No custom session handling - uses Supabase's battle-tested auth.
+
+## Audit Logging
+
+Every authentication event is logged:
+
+| Event                      | Data Captured            |
+| -------------------------- | ------------------------ |
+| `registration_started`     | Email, IP, User Agent    |
+| `registration_completed`   | User ID, Credential ID   |
+| `registration_failed`      | Error reason             |
+| `authentication_started`   | Email hint (if provided) |
+| `authentication_completed` | User ID, Credential ID   |
+| `authentication_failed`    | Error reason             |
+| `passkey_removed`          | Credential ID            |
+
+Logs include timestamps and are protected by RLS.
+
+## Counter Validation
+
+Signature counters prevent credential cloning:
+
+1. Each credential has a counter
+2. Counter increments on each use
+3. Server rejects if counter doesn't increase
+4. Detects potential credential theft
+
+## Dependencies
+
+| Package                 | Purpose             | Security Note             |
+| ----------------------- | ------------------- | ------------------------- |
+| @simplewebauthn/browser | Client WebAuthn     | Well-audited, widely used |
+| @simplewebauthn/server  | Server verification | FIDO Alliance conformant  |
+
+Both packages are maintained by the WebAuthn community and regularly audited.
+
+## Threat Model
+
+### Protected Against
+
+- **Phishing**: Passkeys won't work on fake sites
+- **Credential theft**: No passwords to steal
+- **Replay attacks**: Single-use challenges
+- **Brute force**: Rate limiting
+- **Session hijacking**: Standard Supabase JWT security
+
+### Not Protected Against
+
+- **Device compromise**: If attacker has device access
+- **Social engineering**: User adding attacker's passkey
+- **Application bugs**: In your own code

@@ -1,0 +1,97 @@
+---
+title: Integration Checklist
+description: Step-by-step checklist to ensure your passkey integration is complete and working.
+---
+
+Use this checklist to verify your integration is complete.
+
+## Before You Start
+
+- [ ] Node.js 18+ installed
+- [ ] Supabase CLI installed (`supabase --version`)
+- [ ] Supabase project created
+- [ ] `@supabase/supabase-js` v2.x installed
+- [ ] Running on HTTPS or localhost
+
+## After `npx supakeys init`
+
+- [ ] `supabase/migrations/[timestamp]_passkey_auth.sql` exists
+- [ ] `supabase/functions/passkey-auth/index.ts` exists
+- [ ] `tsconfig.json` excludes `supabase/functions`:
+
+```json
+{
+  "exclude": ["node_modules", "supabase/functions"]
+}
+```
+
+## Link Your Project
+
+```bash
+supabase link --project-ref YOUR_PROJECT_REF
+```
+
+- [ ] Project linked successfully
+
+## After Database Setup
+
+```bash
+supabase db push
+```
+
+- [ ] Command completed without errors
+- [ ] Tables exist in Supabase Dashboard:
+  - [ ] `passkey_credentials`
+  - [ ] `passkey_challenges`
+  - [ ] `passkey_rate_limits`
+  - [ ] `passkey_audit_log`
+
+## After Function Deployment
+
+```bash
+supabase functions deploy passkey-auth
+```
+
+- [ ] Command completed without errors
+- [ ] Function visible in Dashboard → Functions
+- [ ] Test endpoint returns success:
+
+```bash
+curl -X POST 'https://YOUR_PROJECT.supabase.co/functions/v1/passkey-auth' \
+  -H 'Content-Type: application/json' \
+  -H 'apikey: YOUR_ANON_KEY' \
+  -d '{"endpoint":"/register/start","data":{"email":"test@test.com","rpId":"localhost","rpName":"Test"}}'
+```
+
+Expected response: `{"success":true,"data":{...}}`
+
+## Client Integration
+
+- [ ] Environment variables set:
+  - [ ] `NEXT_PUBLIC_SUPABASE_URL` (or equivalent)
+  - [ ] `NEXT_PUBLIC_SUPABASE_ANON_KEY` (or equivalent)
+- [ ] Supabase client initialized
+- [ ] PasskeyAuth client initialized:
+
+```typescript
+const passkeys = createPasskeyAuth(supabase, {
+  rpId: 'your-domain.com', // or 'localhost' for dev
+  rpName: 'Your App Name',
+})
+```
+
+## Testing
+
+- [ ] Registration works (creates user + passkey)
+- [ ] Sign in works (returns session)
+- [ ] List passkeys works (after sign in)
+- [ ] Update passkey works
+- [ ] Remove passkey works
+
+## Before Production
+
+- [ ] Update `rpId` to your production domain
+- [ ] Test on actual devices (Touch ID, Face ID, security keys)
+- [ ] Set up error handling and user feedback
+- [ ] Review rate limits for your use case
+- [ ] Enable audit log monitoring

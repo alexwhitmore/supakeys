@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Passkey Auth E2E Test</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 600px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    h1 { color: #333; }
+    .card {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .card h2 { margin-top: 0; color: #555; }
+    input {
+      width: 100%;
+      padding: 12px;
+      margin: 8px 0;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 16px;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      margin: 8px 0;
+      border: none;
+      border-radius: 4px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-primary {
+      background: #4F46E5;
+      color: white;
+    }
+    .btn-primary:hover { background: #4338CA; }
+    .btn-secondary {
+      background: #6B7280;
+      color: white;
+    }
+    .btn-secondary:hover { background: #4B5563; }
+    .btn-danger {
+      background: #DC2626;
+      color: white;
+    }
+    .btn-danger:hover { background: #B91C1C; }
+    #log {
+      background: #1a1a2e;
+      color: #0f0;
+      padding: 15px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 12px;
+      max-height: 300px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .log-error { color: #ff6b6b; }
+    .log-success { color: #51cf66; }
+    .log-info { color: #74c0fc; }
+    .status {
+      padding: 10px;
+      border-radius: 4px;
+      margin-bottom: 15px;
+      font-weight: 500;
+    }
+    .status.connected { background: #d3f9d8; color: #2b8a3e; }
+    .status.disconnected { background: #ffe3e3; color: #c92a2a; }
+    .passkey-list {
+      list-style: none;
+      padding: 0;
+    }
+    .passkey-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      background: #f8f9fa;
+      border-radius: 4px;
+      margin: 5px 0;
+    }
+    .passkey-info { flex: 1; }
+    .passkey-name { font-weight: 500; }
+    .passkey-meta { font-size: 12px; color: #666; }
+    #session-info { display: none; }
+  </style>
+</head>
+<body>
+  <h1>🔐 Passkey Auth E2E Test</h1>
+
+  <div class="card">
+    <h2>Configuration</h2>
+    <input type="text" id="supabaseUrl" placeholder="Supabase URL" value="http://127.0.0.1:54321">
+    <input type="text" id="anonKey" placeholder="Anon Key">
+    <button class="btn-secondary" onclick="initSupabase()">Connect</button>
+    <div id="connection-status" class="status disconnected">Not connected</div>
+  </div>
+
+  <div class="card">
+    <h2>Register New Passkey</h2>
+    <input type="text" id="register-email" name="register-email-x9k2" placeholder="Email address" autocomplete="off" data-lpignore="true" data-form-type="other" aria-autocomplete="none">
+    <input type="text" id="register-name" placeholder="Passkey name (optional)">
+    <button class="btn-primary" onclick="registerPasskey()">Register Passkey</button>
+  </div>
+
+  <div class="card">
+    <h2>Sign In with Passkey</h2>
+    <input type="text" id="login-email" name="login-email-x9k2" placeholder="Email (optional for discoverable credentials)" autocomplete="off" data-lpignore="true" data-form-type="other" aria-autocomplete="none">
+    <button class="btn-primary" onclick="signInWithPasskey()">Sign In</button>
+  </div>
+
+  <div class="card" id="session-info">
+    <h2>Session Info</h2>
+    <div id="user-email" style="margin-bottom: 10px;"></div>
+    <button class="btn-secondary" onclick="listPasskeys()">List My Passkeys</button>
+    <button class="btn-danger" onclick="signOut()">Sign Out</button>
+    <ul id="passkey-list" class="passkey-list"></ul>
+  </div>
+
+  <div class="card">
+    <h2>Log</h2>
+    <button class="btn-secondary" onclick="clearLog()">Clear Log</button>
+    <div id="log"></div>
+  </div>
+
+  <!-- Supabase JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- SimpleWebAuthn Browser -->
+  <script src="https://cdn.jsdelivr.net/npm/@simplewebauthn/browser@11/dist/bundle/index.umd.min.js"></script>
+
+  <script>
+    let sbClient = null;
+
+    const RP_ID = 'localhost';
+    const RP_NAME = 'Passkey Test App';
+
+    function log(message, type = 'info') {
+      const logEl = document.getElementById('log');
+      const timestamp = new Date().toLocaleTimeString();
+      const className = type === 'error' ? 'log-error' : type === 'success' ? 'log-success' : 'log-info';
+      logEl.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function clearLog() {
+      document.getElementById('log').innerHTML = '';
+    }
+
+    function initSupabase() {
+      const url = document.getElementById('supabaseUrl').value;
+      const key = document.getElementById('anonKey').value;
+
+      if (!url || !key) {
+        log('Please enter Supabase URL and Anon Key', 'error');
+        return;
+      }
+
+      try {
+        sbClient = window.supabase.createClient(url, key);
+        log('Supabase client initialized', 'success');
+        document.getElementById('connection-status').textContent = 'Connected';
+        document.getElementById('connection-status').className = 'status connected';
+
+        // Check for existing session
+        checkSession();
+      } catch (err) {
+        log(`Failed to initialize: ${err.message}`, 'error');
+      }
+    }
+
+    async function checkSession() {
+      const { data: { session } } = await sbClient.auth.getSession();
+      if (session) {
+        log(`Existing session found for: ${session.user.email}`, 'success');
+        showSessionInfo(session);
+      }
+    }
+
+    function showSessionInfo(session) {
+      document.getElementById('session-info').style.display = 'block';
+      document.getElementById('user-email').textContent = `Logged in as: ${session.user.email}`;
+    }
+
+    function hideSessionInfo() {
+      document.getElementById('session-info').style.display = 'none';
+      document.getElementById('passkey-list').innerHTML = '';
+    }
+
+    async function callEdgeFunction(endpoint, data) {
+      // Get current session for authenticated endpoints
+      const { data: { session } } = await sbClient.auth.getSession();
+
+      const options = {
+        body: {
+          endpoint,
+          data: {
+            ...data,
+            rpId: RP_ID,
+            rpName: RP_NAME,
+          },
+        },
+      };
+
+      // Include auth header if we have a session
+      if (session?.access_token) {
+        options.headers = {
+          Authorization: `Bearer ${session.access_token}`,
+        };
+      }
+
+      const { data: response, error } = await sbClient.functions.invoke('passkey-auth', options);
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      return response;
+    }
+
+    async function registerPasskey() {
+      if (!sbClient) {
+        log('Please connect to Supabase first', 'error');
+        return;
+      }
+
+      const email = document.getElementById('register-email').value;
+      const authenticatorName = document.getElementById('register-name').value;
+
+      if (!email) {
+        log('Please enter an email address', 'error');
+        return;
+      }
+
+      try {
+        log(`Starting registration for: ${email}`);
+
+        // Step 1: Get registration options
+        log('Calling /register/start...');
+        const startResponse = await callEdgeFunction('/register/start', {
+          email,
+          displayName: email,
+          authenticatorName: authenticatorName || undefined,
+        });
+
+        if (!startResponse.success) {
+          throw new Error(startResponse.error?.message || 'Failed to start registration');
+        }
+
+        log('Got registration options, prompting for passkey...', 'info');
+        const { options, challengeId } = startResponse.data;
+
+        // Step 2: Create credential with browser
+        const credential = await SimpleWebAuthnBrowser.startRegistration({ optionsJSON: options });
+        log('Passkey created, verifying...', 'info');
+
+        // Step 3: Verify with server
+        log('Calling /register/finish...');
+        const finishResponse = await callEdgeFunction('/register/finish', {
+          challengeId,
+          response: credential,
+          authenticatorName: authenticatorName || undefined,
+        });
+
+        if (!finishResponse.success || !finishResponse.data?.verified) {
+          throw new Error(finishResponse.error?.message || 'Verification failed');
+        }
+
+        log(`Registration successful! Passkey ID: ${finishResponse.data.passkey.id.substring(0, 20)}...`, 'success');
+        log(`Device type: ${finishResponse.data.passkey.deviceType}, Backed up: ${finishResponse.data.passkey.backedUp}`, 'success');
+
+      } catch (err) {
+        if (err.name === 'NotAllowedError') {
+          log('Registration cancelled by user', 'error');
+        } else {
+          log(`Registration failed: ${err.message}`, 'error');
+        }
+      }
+    }
+
+    async function signInWithPasskey() {
+      if (!sbClient) {
+        log('Please connect to Supabase first', 'error');
+        return;
+      }
+
+      const email = document.getElementById('login-email').value || undefined;
+
+      try {
+        log(`Starting authentication${email ? ` for: ${email}` : ' (discoverable)'}`);
+
+        // Step 1: Get authentication options
+        log('Calling /login/start...');
+        const startResponse = await callEdgeFunction('/login/start', { email });
+
+        if (!startResponse.success) {
+          throw new Error(startResponse.error?.message || 'Failed to start authentication');
+        }
+
+        log('Got authentication options, prompting for passkey...', 'info');
+        const { options, challengeId } = startResponse.data;
+
+        // Step 2: Get assertion from authenticator
+        const credential = await SimpleWebAuthnBrowser.startAuthentication({ optionsJSON: options });
+        log('Got assertion, verifying...', 'info');
+
+        // Step 3: Verify with server
+        log('Calling /login/finish...');
+        const finishResponse = await callEdgeFunction('/login/finish', {
+          challengeId,
+          response: credential,
+        });
+
+        if (!finishResponse.success || !finishResponse.data?.verified) {
+          throw new Error(finishResponse.error?.message || 'Authentication failed');
+        }
+
+        log('Server verification successful, creating session...', 'info');
+
+        // Step 4: Create Supabase session
+        const { tokenHash, email: userEmail } = finishResponse.data;
+        const { data: sessionData, error: sessionError } = await sbClient.auth.verifyOtp({
+          token_hash: tokenHash,
+          type: 'email',
+        });
+
+        if (sessionError) {
+          throw new Error(sessionError.message);
+        }
+
+        log(`Authentication successful! Logged in as: ${userEmail}`, 'success');
+        showSessionInfo(sessionData.session);
+
+      } catch (err) {
+        if (err.name === 'NotAllowedError') {
+          log('Authentication cancelled by user', 'error');
+        } else {
+          log(`Authentication failed: ${err.message}`, 'error');
+        }
+      }
+    }
+
+    async function listPasskeys() {
+      if (!sbClient) return;
+
+      try {
+        log('Fetching passkeys...');
+        const response = await callEdgeFunction('/passkeys/list', {});
+
+        if (!response.success) {
+          throw new Error(response.error?.message || 'Failed to list passkeys');
+        }
+
+        const passkeys = response.data.passkeys;
+        log(`Found ${passkeys.length} passkey(s)`, 'success');
+
+        const listEl = document.getElementById('passkey-list');
+        listEl.innerHTML = passkeys.map(pk => `
+          <li class="passkey-item">
+            <div class="passkey-info">
+              <div class="passkey-name">${pk.authenticatorName || 'Unnamed Passkey'}</div>
+              <div class="passkey-meta">
+                ${pk.deviceType} | ${pk.backedUp ? 'Synced' : 'Not synced'} |
+                Created: ${new Date(pk.createdAt).toLocaleDateString()}
+                ${pk.lastUsedAt ? `| Last used: ${new Date(pk.lastUsedAt).toLocaleDateString()}` : ''}
+              </div>
+            </div>
+            <button class="btn-danger" style="width: auto; padding: 5px 10px;" onclick="removePasskey('${pk.id}')">Remove</button>
+          </li>
+        `).join('');
+
+      } catch (err) {
+        log(`Failed to list passkeys: ${err.message}`, 'error');
+      }
+    }
+
+    async function removePasskey(credentialId) {
+      if (!confirm('Are you sure you want to remove this passkey?')) return;
+
+      try {
+        log(`Removing passkey: ${credentialId.substring(0, 20)}...`);
+        const response = await callEdgeFunction('/passkeys/remove', { credentialId });
+
+        if (!response.success) {
+          throw new Error(response.error?.message || 'Failed to remove passkey');
+        }
+
+        log('Passkey removed successfully', 'success');
+        listPasskeys();
+
+      } catch (err) {
+        log(`Failed to remove passkey: ${err.message}`, 'error');
+      }
+    }
+
+    async function signOut() {
+      if (!sbClient) return;
+
+      try {
+        await sbClient.auth.signOut();
+        log('Signed out successfully', 'success');
+        hideSessionInfo();
+      } catch (err) {
+        log(`Sign out failed: ${err.message}`, 'error');
+      }
+    }
+
+    // Check WebAuthn support on load
+    window.addEventListener('DOMContentLoaded', () => {
+      if (window.PublicKeyCredential) {
+        log('WebAuthn is supported', 'success');
+        PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().then(available => {
+          log(`Platform authenticator available: ${available}`, 'info');
+        });
+      } else {
+        log('WebAuthn is NOT supported in this browser!', 'error');
+      }
+    });
+  </script>
+</body>
+</html>

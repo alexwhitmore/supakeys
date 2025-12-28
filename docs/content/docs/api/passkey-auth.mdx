@@ -1,0 +1,249 @@
+---
+title: PasskeyAuth
+description: The PasskeyAuth class is the main interface for passkey authentication operations.
+---
+
+## Creating an Instance
+
+```typescript
+import { createPasskeyAuth, PasskeyAuth } from 'supakeys'
+import { createClient } from '@supabase/supabase-js'
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+
+// Using factory function (recommended)
+const passkeys = createPasskeyAuth(supabase, {
+  functionName: 'passkey-auth',
+  rpId: 'example.com',
+  rpName: 'My App',
+  timeout: 60000,
+})
+
+// Using class directly
+const passkeys = new PasskeyAuth(supabase, config)
+```
+
+## Configuration
+
+```typescript
+interface PasskeyAuthConfig {
+  functionName?: string // Edge function name (default: 'passkey-auth')
+  rpId?: string // Relying Party ID (default: window.location.hostname)
+  rpName?: string // Relying Party name (default: 'My App')
+  timeout?: number // WebAuthn timeout in ms (default: 60000)
+}
+```
+
+## Methods
+
+### isSupported()
+
+Check if passkeys are supported in the current browser.
+
+```typescript
+const support = await passkeys.isSupported()
+// { webauthn: true, platformAuthenticator: true, conditionalUI: true }
+```
+
+Returns: `Promise<PasskeySupport>`
+
+---
+
+### register(options)
+
+Register a new user with a passkey.
+
+```typescript
+const result = await passkeys.register({
+  email: 'user@example.com',
+  displayName: 'John Doe', // Optional
+  authenticatorName: 'My MacBook', // Optional
+})
+
+if (result.success) {
+  console.log('Registered:', result.passkey)
+} else {
+  console.error('Failed:', result.error)
+}
+```
+
+**Parameters:**
+
+| Name                | Type     | Required | Description                      |
+| ------------------- | -------- | -------- | -------------------------------- |
+| `email`             | `string` | Yes      | User's email address             |
+| `displayName`       | `string` | No       | Display name (defaults to email) |
+| `authenticatorName` | `string` | No       | Name for this passkey            |
+
+**Returns:** `Promise<RegisterPasskeyResult>`
+
+```typescript
+interface RegisterPasskeyResult {
+  success: boolean
+  passkey?: Passkey
+  error?: PasskeyError
+}
+```
+
+---
+
+### signIn(options?)
+
+Sign in with an existing passkey.
+
+```typescript
+// Discoverable credentials (no email needed)
+const result = await passkeys.signIn()
+
+// With email hint (pre-filters credentials)
+const result = await passkeys.signIn({ email: 'user@example.com' })
+
+if (result.success) {
+  console.log('Session:', result.session)
+} else {
+  console.error('Failed:', result.error)
+}
+```
+
+**Parameters:**
+
+| Name    | Type     | Required | Description                 |
+| ------- | -------- | -------- | --------------------------- |
+| `email` | `string` | No       | Email to filter credentials |
+
+**Returns:** `Promise<SignInWithPasskeyResult>`
+
+```typescript
+interface SignInWithPasskeyResult {
+  success: boolean
+  session?: Session
+  error?: PasskeyError
+}
+```
+
+---
+
+### linkPasskey(options?)
+
+Add a new passkey to the current authenticated user.
+
+```typescript
+const result = await passkeys.linkPasskey({
+  authenticatorName: 'Work Laptop',
+})
+
+if (result.success) {
+  console.log('Linked:', result.passkey)
+}
+```
+
+**Parameters:**
+
+| Name                | Type     | Required | Description           |
+| ------------------- | -------- | -------- | --------------------- |
+| `authenticatorName` | `string` | No       | Name for this passkey |
+
+**Returns:** `Promise<LinkPasskeyResult>`
+
+Requires: User must be authenticated.
+
+---
+
+### listPasskeys()
+
+Get all passkeys for the current user.
+
+```typescript
+const result = await passkeys.listPasskeys()
+
+if (result.success) {
+  result.passkeys.forEach((pk) => {
+    console.log(pk.id, pk.authenticatorName)
+  })
+}
+```
+
+**Returns:** `Promise<ListPasskeysResult>`
+
+```typescript
+interface ListPasskeysResult {
+  success: boolean
+  passkeys?: Passkey[]
+  error?: PasskeyError
+}
+```
+
+Requires: User must be authenticated.
+
+---
+
+### updatePasskey(options)
+
+Update a passkey's name.
+
+```typescript
+const result = await passkeys.updatePasskey({
+  credentialId: 'abc123...',
+  authenticatorName: 'Personal MacBook',
+})
+
+if (result.success) {
+  console.log('Updated:', result.passkey)
+}
+```
+
+**Parameters:**
+
+| Name                | Type     | Required | Description              |
+| ------------------- | -------- | -------- | ------------------------ |
+| `credentialId`      | `string` | Yes      | The passkey ID to update |
+| `authenticatorName` | `string` | Yes      | New name                 |
+
+**Returns:** `Promise<UpdatePasskeyResult>`
+
+Requires: User must be authenticated and own the passkey.
+
+---
+
+### removePasskey(options)
+
+Remove a passkey from the account.
+
+```typescript
+const result = await passkeys.removePasskey({
+  credentialId: 'abc123...',
+})
+
+if (result.success) {
+  console.log('Removed')
+}
+```
+
+**Parameters:**
+
+| Name           | Type     | Required | Description              |
+| -------------- | -------- | -------- | ------------------------ |
+| `credentialId` | `string` | Yes      | The passkey ID to remove |
+
+**Returns:** `Promise<RemovePasskeyResult>`
+
+Requires: User must be authenticated and own the passkey.
+
+## Passkey Object
+
+All methods that return passkey data use this shape:
+
+```typescript
+interface Passkey {
+  id: string // Credential ID
+  userId: string // Supabase user ID
+  webauthnUserId: string // WebAuthn user handle
+  authenticatorName: string | null // User-defined name
+  deviceType: 'singleDevice' | 'multiDevice'
+  backedUp: boolean // Synced to cloud
+  transports: AuthenticatorTransport[]
+  aaguid: string | null // Authenticator identifier
+  createdAt: string // ISO timestamp
+  lastUsedAt: string | null // ISO timestamp
+}
+```

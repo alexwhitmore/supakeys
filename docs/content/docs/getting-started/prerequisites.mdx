@@ -1,0 +1,97 @@
+---
+title: Prerequisites
+description: Before adding passkey authentication to your project, make sure you have the following requirements.
+---
+
+## Required
+
+### Supabase Project
+
+You need an active Supabase project. If you don't have one:
+
+1. Go to [supabase.com](https://supabase.com)
+2. Create a new project
+3. Note your project URL and anon key
+
+### Supabase CLI
+
+The Supabase CLI is needed to run migrations and deploy edge functions:
+
+```bash
+# Install with npm (all platforms)
+npm install -g supabase
+
+# macOS with Homebrew
+brew install supabase/tap/supabase
+
+# Windows with Scoop
+scoop bucket add supabase https://github.com/supabase/scoop-bucket.git
+scoop install supabase
+
+# Linux
+brew install supabase/tap/supabase
+# or download from https://github.com/supabase/cli/releases
+```
+
+Verify installation:
+
+```bash
+supabase --version
+```
+
+### Node.js
+
+Node.js 18 or later is required:
+
+```bash
+node --version  # Should be v18.0.0 or higher
+```
+
+## HTTPS Requirement
+
+WebAuthn requires a secure context. Your app must be served over HTTPS in production. For development:
+
+- `localhost` works without HTTPS
+- Local IP addresses require HTTPS
+- Use a tool like [mkcert](https://github.com/FiloSottile/mkcert) for local HTTPS
+
+## Browser Requirements
+
+Users need a modern browser with WebAuthn support:
+
+| Browser | Minimum Version |
+| ------- | --------------- |
+| Chrome  | 67+             |
+| Firefox | 60+             |
+| Safari  | 13+             |
+| Edge    | 79+             |
+
+You can check support programmatically:
+
+```typescript
+import { getPasskeySupport } from 'supakeys'
+
+const support = await getPasskeySupport()
+console.log(support.webauthn) // true if supported
+```
+
+## Recommended
+
+### TypeScript
+
+While not required, TypeScript is recommended for the best developer experience:
+
+```bash
+npm install -D typescript
+```
+
+### Local Supabase Setup
+
+For development, consider running Supabase locally:
+
+```bash
+supabase init
+supabase start
+```
+
+This gives you a local database and edge functions runtime for testing.

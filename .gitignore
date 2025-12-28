@@ -1,0 +1,20 @@
+node_modules/
+dist/
+coverage/
+.env
+.env.local
+.env*.local
+*.log
+.DS_Store
+*.tsbuildinfo
+
+# Build artifacts
+docs/.next/
+
+# Local Supabase config
+supabase/
+
+# Documentation files (personal reference only)
+*.md
+!README.md
+!CHANGELOG.md

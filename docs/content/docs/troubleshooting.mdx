@@ -1,0 +1,277 @@
+---
+title: Troubleshooting
+description: Solutions to common issues when implementing passkey authentication.
+---
+
+## Browser Support
+
+### "WebAuthn is not supported"
+
+**Cause**: Browser or context doesn't support WebAuthn.
+
+**Solutions**:
+
+1. Ensure you're using HTTPS (or localhost for development)
+2. Check browser version meets minimum requirements
+3. Verify the page isn't in an iframe from a different origin
+
+```typescript
+import { getUnsupportedReason } from 'supakeys'
+
+const reason = getUnsupportedReason()
+if (reason) {
+  console.log('Not supported:', reason)
+}
+```
+
+### "Secure context required"
+
+**Cause**: Page is served over HTTP.
+
+**Solutions**:
+
+- Use `localhost` for development
+- Deploy with HTTPS for production
+- Use a tool like [mkcert](https://github.com/FiloSottile/mkcert) for local HTTPS
+
+## Registration Issues
+
+### "A passkey already exists on this device"
+
+**Error code**: `INVALID_STATE`
+
+**Cause**: User already registered a passkey for this account on this device.
+
+**Solution**: Offer to sign in instead:
+
+```typescript
+if (result.error.code === 'INVALID_STATE') {
+  const signInResult = await passkeys.signIn({ email })
+}
+```
+
+### "Registration cancelled"
+
+**Error code**: `CANCELLED`
+
+**Cause**: User closed the WebAuthn dialog.
+
+**Solution**: This is normal user behavior. Show a message and allow retry.
+
+### "Registration timed out"
+
+**Error code**: `TIMEOUT`
+
+**Cause**: User didn't complete registration within 60 seconds.
+
+**Solution**: Show a message and allow retry.
+
+## Authentication Issues
+
+### "No credentials available"
+
+**Cause**: No passkeys registered for this email/device combination.
+
+**Solutions**:
+
+1. Check if user has registered
+2. Try without email hint for discoverable credentials
+3. Offer password fallback
+
+### "Authentication failed"
+
+**Error code**: `VERIFICATION_FAILED`
+
+**Causes**:
+
+- Credential verification failed
+- Challenge mismatch
+- Counter validation failed
+
+**Solutions**:
+
+1. Retry the authentication
+2. Check server logs for details
+3. If persistent, user may need to re-register
+
+### "Challenge expired"
+
+**Error code**: `CHALLENGE_EXPIRED`
+
+**Cause**: User took longer than 5 minutes to complete.
+
+**Solution**: Automatically restart the flow:
+
+```typescript
+if (result.error.code === 'CHALLENGE_EXPIRED') {
+  return passkeys.signIn() // Start fresh
+}
+```
+
+## Edge Function Issues
+
+### "Edge function not found"
+
+**Cause**: Function not deployed or wrong name.
+
+**Solutions**:
+
+1. Deploy the function: `supabase functions deploy passkey-auth`
+2. Check function name in config matches deployment
+3. Verify function appears in Supabase dashboard
+
+### "Network error"
+
+**Error code**: `NETWORK_ERROR`
+
+**Causes**:
+
+- Edge function is down
+- CORS issues
+- Network connectivity
+
+**Solutions**:
+
+1. Check Supabase status page
+2. Verify function is deployed
+3. Check browser console for CORS errors
+
+### "Internal server error"
+
+**Cause**: Edge function threw an error.
+
+**Solutions**:
+
+1. Check Supabase function logs
+2. Verify database tables exist
+3. Check environment variables
+
+## Database Issues
+
+### "relation does not exist"
+
+**Cause**: Migration not applied.
+
+**Solutions**:
+
+1. Run migration: `supabase db push`
+2. For local: `supabase migration up`
+3. Verify tables in Supabase dashboard
+
+### "RLS policy violation"
+
+**Cause**: Row Level Security blocking access.
+
+**Solutions**:
+
+1. Ensure edge function uses service role
+2. Verify RLS policies are correctly set
+3. Check user authentication state
+
+## Rate Limiting
+
+### "Too many attempts"
+
+**Error code**: `RATE_LIMITED`
+
+**Cause**: Exceeded rate limits.
+
+**Default limits**:
+
+- 5 requests/minute per IP
+- 10 requests/minute per email
+
+**Solutions**:
+
+1. Wait 60 seconds before retrying
+2. Show user-friendly message
+3. For development, you can temporarily increase limits
+
+## Local Development
+
+### "Function not responding"
+
+**Cause**: Local function server not running.
+
+**Solution**: Start the function server:
+
+```bash
+supabase functions serve passkey-auth --no-verify-jwt
+```
+
+### "Cannot connect to database"
+
+**Cause**: Local Supabase not running.
+
+**Solution**: Start Supabase:
+
+```bash
+supabase start
+```
+
+### "JWT verification failed"
+
+**Cause**: Using `--no-verify-jwt` but function expects auth.
+
+**Solutions**:
+
+- Continue using `--no-verify-jwt` for development
+- Or configure proper JWT verification
+
+## Debugging Tips
+
+### Enable Verbose Logging
+
+```typescript
+const result = await passkeys.register({ email })
+
+if (!result.success) {
+  console.error('Passkey error:', {
+    code: result.error.code,
+    message: result.error.message,
+    cause: result.error.cause,
+  })
+}
+```
+
+### Check Edge Function Logs
+
+```bash
+supabase functions logs passkey-auth
+```
+
+### Inspect Network Requests
+
+Use browser DevTools to inspect:
+
+1. Request payload to edge function
+2. Response from edge function
+3. Any error messages
+
+### Verify Database State
+
+```sql
+-- Check credentials
+SELECT * FROM passkey_credentials WHERE user_id = 'your-user-id';
+
+-- Check challenges
+SELECT * FROM passkey_challenges ORDER BY created_at DESC LIMIT 10;
+
+-- Check rate limits
+SELECT * FROM passkey_rate_limits;
+
+-- Check audit log
+SELECT * FROM passkey_audit_log ORDER BY created_at DESC LIMIT 20;
+```
+
+## Getting Help
+
+If you're still stuck:
+
+1. Check the [GitHub issues](https://github.com/your-repo/supakeys/issues)
+2. Search existing discussions
+3. Open a new issue with:
+   - Error code and message
+   - Browser and OS version
+   - Relevant code snippet
+   - Edge function logs

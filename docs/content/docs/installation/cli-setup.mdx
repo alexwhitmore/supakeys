@@ -1,0 +1,93 @@
+---
+title: CLI Setup
+description: The Supakeys CLI automates the setup of passkey authentication in your Supabase project.
+---
+
+## Install the CLI
+
+```bash
+npm install -D supakeys
+```
+
+Or run directly with npx:
+
+```bash
+npx supakeys init
+```
+
+## Running the Init Command
+
+The `init` command sets up everything you need:
+
+```bash
+npx supakeys init
+```
+
+### What It Creates
+
+1. **Database Migration** - SQL file in `supabase/migrations/` for passkey tables
+2. **Edge Function** - TypeScript function in `supabase/functions/passkey-auth/`
+
+### Command Options
+
+```bash
+npx supakeys init [options]
+
+Options:
+  -d, --dir <directory>  Supabase directory (default: "./supabase")
+  --skip-migration       Skip database migration setup
+  --skip-function        Skip edge function setup
+  --dry-run              Show what would be created without writing files
+```
+
+## Dry Run Mode
+
+Preview what will be created without writing files:
+
+```bash
+npx supakeys init --dry-run
+```
+
+This shows:
+
+- Migration SQL that would be created
+- Edge function code that would be deployed
+- Client code examples for your framework
+
+## Framework Detection
+
+The CLI automatically detects your framework by looking for config files:
+
+| Framework              | Detection                |
+| ---------------------- | ------------------------ |
+| Next.js                | `next.config.*`          |
+| Remix                  | `remix.config.*`         |
+| SvelteKit              | `svelte.config.*`        |
+| Nuxt                   | `nuxt.config.*`          |
+| Astro                  | `astro.config.*`         |
+| React                  | `react` in dependencies  |
+| Vue                    | `vue` in dependencies    |
+
+## After Running Init
+
+Once the CLI completes:
+
+1. **Link your Supabase project**:
+
+   ```bash
+   supabase link --project-ref YOUR_PROJECT_REF
+   ```
+
+   Find your project ref in the dashboard URL: `https://supabase.com/dashboard/project/YOUR_PROJECT_REF`
+
+2. **Run the migration**:
+
+   ```bash
+   supabase db push
+   ```
+
+3. **Deploy the edge function**:
+
+   ```bash
+   supabase functions deploy passkey-auth
+   ```

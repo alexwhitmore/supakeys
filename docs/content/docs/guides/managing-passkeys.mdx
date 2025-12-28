@@ -1,0 +1,258 @@
+---
+title: Managing Passkeys
+description: Users can have multiple passkeys registered to their account. This guide covers the passkey management features.
+---
+
+## Why Multiple Passkeys?
+
+Users may want multiple passkeys for:
+
+- Different devices (phone, laptop, tablet)
+- Backup security keys
+- Work vs personal devices
+- Shared family devices
+
+## Listing Passkeys
+
+Get all passkeys for the current user:
+
+```typescript
+const result = await passkeys.listPasskeys()
+
+if (result.success) {
+  result.passkeys.forEach(passkey => {
+    console.log({
+      id: passkey.id,
+      name: passkey.authenticatorName,
+      deviceType: passkey.deviceType,
+      backedUp: passkey.backedUp,
+      createdAt: passkey.createdAt,
+      lastUsedAt: passkey.lastUsedAt
+    })
+  })
+}
+```
+
+## Adding a Passkey
+
+Add a new passkey to an existing authenticated session:
+
+```typescript
+const result = await passkeys.linkPasskey({
+  authenticatorName: 'Work Laptop'
+})
+
+if (result.success) {
+  console.log('Added passkey:', result.passkey)
+}
+```
+
+The `linkPasskey` method:
+
+- Requires the user to be signed in
+- Uses the current user's email
+- Creates a new credential on the device
+
+## Updating a Passkey
+
+Rename a passkey:
+
+```typescript
+const result = await passkeys.updatePasskey({
+  credentialId: 'abc123...',
+  authenticatorName: 'Personal MacBook Pro'
+})
+
+if (result.success) {
+  console.log('Updated passkey:', result.passkey)
+}
+```
+
+## Removing a Passkey
+
+Remove a passkey from the account:
+
+```typescript
+const result = await passkeys.removePasskey({
+  credentialId: 'abc123...'
+})
+
+if (result.success) {
+  console.log('Passkey removed')
+}
+```
+
+Users should always keep at least one passkey to avoid being locked out.
+
+## Complete Management UI
+
+```tsx
+import { useState, useEffect } from 'react'
+import { createPasskeyAuth, Passkey } from 'supakeys'
+
+interface Props {
+  supabase: any
+}
+
+export function PasskeyManager({ supabase }: Props) {
+  const [passkeys, setPasskeys] = useState<Passkey[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editName, setEditName] = useState('')
+
+  const passkeyAuth = createPasskeyAuth(supabase, {
+    rpId: typeof window !== 'undefined' ? window.location.hostname : 'localhost',
+    rpName: 'My App',
+  })
+
+  async function loadPasskeys() {
+    setLoading(true)
+    const result = await passkeyAuth.listPasskeys()
+    if (result.success) {
+      setPasskeys(result.passkeys!)
+    } else {
+      setError(result.error!.message)
+    }
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    loadPasskeys()
+  }, [])
+
+  async function handleAdd() {
+    const name = prompt('Name for this passkey (e.g., "Work Laptop"):')
+    if (!name) return
+
+    const result = await passkeyAuth.linkPasskey({
+      authenticatorName: name
+    })
+
+    if (result.success) {
+      loadPasskeys()
+    } else {
+      setError(result.error!.message)
+    }
+  }
+
+  async function handleUpdate(id: string) {
+    if (!editName.trim()) return
+
+    const result = await passkeyAuth.updatePasskey({
+      credentialId: id,
+      authenticatorName: editName
+    })
+
+    if (result.success) {
+      setEditingId(null)
+      setEditName('')
+      loadPasskeys()
+    } else {
+      setError(result.error!.message)
+    }
+  }
+
+  async function handleRemove(id: string) {
+    if (passkeys.length === 1) {
+      alert('You must keep at least one passkey')
+      return
+    }
+
+    if (!confirm('Remove this passkey?')) return
+
+    const result = await passkeyAuth.removePasskey({
+      credentialId: id
+    })
+
+    if (result.success) {
+      loadPasskeys()
+    } else {
+      setError(result.error!.message)
+    }
+  }
+
+  function startEdit(passkey: Passkey) {
+    setEditingId(passkey.id)
+    setEditName(passkey.authenticatorName || '')
+  }
+
+  if (loading) {
+    return <div>Loading passkeys...</div>
+  }
+
+  return (
+    <div>
+      <h2>Your Passkeys</h2>
+
+      {error && (
+        <div className="error">
+          {error}
+          <button onClick={() => setError('')}>Dismiss</button>
+        </div>
+      )}
+
+      <ul>
+        {passkeys.map(passkey => (
+          <li key={passkey.id}>
+            {editingId === passkey.id ? (
+              <div>
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                />
+                <button onClick={() => handleUpdate(passkey.id)}>Save</button>
+                <button onClick={() => setEditingId(null)}>Cancel</button>
+              </div>
+            ) : (
+              <div>
+                <strong>{passkey.authenticatorName || 'Unnamed'}</strong>
+                <span>
+                  {passkey.deviceType === 'multiDevice' ? ' (synced)' : ' (device-bound)'}
+                </span>
+                <br />
+                <small>
+                  Created: {new Date(passkey.createdAt).toLocaleDateString()}
+                  {passkey.lastUsedAt && (
+                    <> · Last used: {new Date(passkey.lastUsedAt).toLocaleDateString()}</>
+                  )}
+                </small>
+                <div>
+                  <button onClick={() => startEdit(passkey)}>Rename</button>
+                  <button onClick={() => handleRemove(passkey.id)}>Remove</button>
+                </div>
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
+
+      <button onClick={handleAdd}>Add New Passkey</button>
+    </div>
+  )
+}
+```
+
+## Passkey Information
+
+Each passkey includes:
+
+| Field               | Description                             |
+| ------------------- | --------------------------------------- |
+| `id`                | Unique identifier (credential ID)       |
+| `authenticatorName` | User-defined name                       |
+| `deviceType`        | `singleDevice` or `multiDevice`         |
+| `backedUp`          | If synced to cloud (iCloud, Google)     |
+| `transports`        | How it connects (usb, nfc, internal)    |
+| `aaguid`            | Authenticator make/model identifier     |
+| `createdAt`         | When registered                         |
+| `lastUsedAt`        | Last authentication time                |
+
+## Best Practices
+
+1. **Show device type** - Let users know if a passkey syncs across devices
+2. **Display last used** - Help users identify old/unused passkeys
+3. **Prevent lockout** - Don't allow removing the last passkey
+4. **Encourage naming** - Default names like "Chrome on MacOS" help identification
+5. **Backup reminder** - Prompt users to add a backup passkey

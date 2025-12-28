@@ -1,0 +1,284 @@
+---
+title: Next.js App Router
+description: This guide shows how to integrate passkey authentication with Next.js 13+ App Router.
+---
+
+## Setup
+
+### 1. Install Dependencies
+
+```bash
+npm install supakeys @supabase/supabase-js @supabase/ssr
+```
+
+### 2. Environment Variables
+
+Add to your `.env.local`:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=your-project-url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+```
+
+### 3. Create Supabase Client
+
+Create `lib/supabase/client.ts`:
+
+```typescript
+import { createBrowserClient } from '@supabase/ssr'
+
+export function createClient() {
+  return createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+}
+```
+
+### 4. Create Passkey Client
+
+Create `lib/passkeys.ts`:
+
+```typescript
+import { createPasskeyAuth } from 'supakeys'
+import { createClient } from './supabase/client'
+
+export function createPasskeys() {
+  const supabase = createClient()
+  return createPasskeyAuth(supabase, {
+    rpId: typeof window !== 'undefined' ? window.location.hostname : 'localhost',
+    rpName: 'My App',
+  })
+}
+```
+
+## Components
+
+### Passkey Support Check
+
+Create a hook to check passkey support:
+
+```typescript
+'use client'
+
+import { useState, useEffect } from 'react'
+import { getPasskeySupport, PasskeySupport } from 'supakeys'
+
+export function usePasskeySupport() {
+  const [support, setSupport] = useState<PasskeySupport | null>(null)
+
+  useEffect(() => {
+    getPasskeySupport().then(setSupport)
+  }, [])
+
+  return support
+}
+```
+
+### Registration Form
+
+```tsx
+'use client'
+
+import { useState } from 'react'
+import { createPasskeys } from '@/lib/passkeys'
+import { usePasskeySupport } from '@/hooks/usePasskeySupport'
+
+export function RegisterForm() {
+  const [email, setEmail] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const support = usePasskeySupport()
+
+  if (support && !support.webauthn) {
+    return <p>Your browser doesn't support passkeys.</p>
+  }
+
+  async function handleRegister(e: React.FormEvent) {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+
+    const passkeys = createPasskeys()
+    const result = await passkeys.register({ email })
+
+    setLoading(false)
+
+    if (result.success) {
+      window.location.href = '/dashboard'
+    } else {
+      setError(result.error.message)
+    }
+  }
+
+  return (
+    <form onSubmit={handleRegister}>
+      <input
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="your@email.com"
+        required
+      />
+      <button type="submit" disabled={loading}>
+        {loading ? 'Creating passkey...' : 'Create Account'}
+      </button>
+      {error && <p className="error">{error}</p>}
+    </form>
+  )
+}
+```
+
+### Login Button
+
+```tsx
+'use client'
+
+import { useState } from 'react'
+import { createPasskeys } from '@/lib/passkeys'
+
+export function LoginButton() {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  async function handleLogin() {
+    setLoading(true)
+    setError('')
+
+    const passkeys = createPasskeys()
+    const result = await passkeys.signIn()
+
+    setLoading(false)
+
+    if (result.success) {
+      window.location.href = '/dashboard'
+    } else {
+      setError(result.error.message)
+    }
+  }
+
+  return (
+    <>
+      <button onClick={handleLogin} disabled={loading}>
+        {loading ? 'Signing in...' : 'Sign in with Passkey'}
+      </button>
+      {error && <p className="error">{error}</p>}
+    </>
+  )
+}
+```
+
+## Pages
+
+### Login Page
+
+```tsx
+import { RegisterForm } from '@/components/RegisterForm'
+import { LoginButton } from '@/components/LoginButton'
+
+export default function LoginPage() {
+  return (
+    <div>
+      <h1>Welcome</h1>
+
+      <section>
+        <h2>New here?</h2>
+        <RegisterForm />
+      </section>
+
+      <section>
+        <h2>Already have an account?</h2>
+        <LoginButton />
+      </section>
+    </div>
+  )
+}
+```
+
+### Dashboard Page (Protected)
+
+```tsx
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+import { PasskeyList } from '@/components/PasskeyList'
+
+export default async function DashboardPage() {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect('/login')
+  }
+
+  return (
+    <div>
+      <h1>Dashboard</h1>
+      <p>Welcome, {user.email}</p>
+      <PasskeyList />
+    </div>
+  )
+}
+```
+
+### Passkey Management
+
+```tsx
+'use client'
+
+import { useState, useEffect } from 'react'
+import { createPasskeys } from '@/lib/passkeys'
+import type { Passkey } from 'supakeys'
+
+export function PasskeyList() {
+  const [passkeys, setPasskeys] = useState<Passkey[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    loadPasskeys()
+  }, [])
+
+  async function loadPasskeys() {
+    const pk = createPasskeys()
+    const result = await pk.listPasskeys()
+    if (result.success) {
+      setPasskeys(result.passkeys!)
+    }
+    setLoading(false)
+  }
+
+  async function addPasskey() {
+    const pk = createPasskeys()
+    const result = await pk.linkPasskey({
+      authenticatorName: 'New Device'
+    })
+    if (result.success) {
+      loadPasskeys()
+    }
+  }
+
+  async function removePasskey(credentialId: string) {
+    const pk = createPasskeys()
+    await pk.removePasskey({ credentialId })
+    loadPasskeys()
+  }
+
+  if (loading) return <p>Loading...</p>
+
+  return (
+    <div>
+      <h2>Your Passkeys</h2>
+      <ul>
+        {passkeys.map((pk) => (
+          <li key={pk.id}>
+            {pk.authenticatorName || 'Unnamed passkey'}
+            <button onClick={() => removePasskey(pk.id)}>
+              Remove
+            </button>
+          </li>
+        ))}
+      </ul>
+      <button onClick={addPasskey}>Add New Passkey</button>
+    </div>
+  )
+}
+```

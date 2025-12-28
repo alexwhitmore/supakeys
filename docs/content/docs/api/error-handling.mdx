@@ -1,0 +1,212 @@
+---
+title: Error Handling
+description: All passkey operations return a result object with success, error, and data fields. This page covers error codes and handling strategies.
+---
+
+## Error Structure
+
+```typescript
+interface PasskeyError {
+  code: PasskeyErrorCode
+  message: string
+  cause?: unknown // Original error, if any
+}
+```
+
+## Error Codes
+
+| Code                   | Description                               |
+| ---------------------- | ----------------------------------------- |
+| `NOT_SUPPORTED`        | WebAuthn not available in browser/context |
+| `CANCELLED`            | User cancelled the operation              |
+| `TIMEOUT`              | Operation timed out (default: 60s)        |
+| `INVALID_STATE`        | Passkey already exists on device          |
+| `SECURITY_ERROR`       | Blocked by security policy                |
+| `CHALLENGE_EXPIRED`    | Challenge TTL exceeded (5 min)            |
+| `CHALLENGE_MISMATCH`   | Challenge validation failed               |
+| `VERIFICATION_FAILED`  | Credential verification failed            |
+| `CREDENTIAL_NOT_FOUND` | Passkey doesn't exist                     |
+| `USER_NOT_FOUND`       | User account not found                    |
+| `CREDENTIAL_EXISTS`    | Passkey already registered                |
+| `RATE_LIMITED`         | Too many requests                         |
+| `NETWORK_ERROR`        | Network request failed                    |
+| `UNKNOWN_ERROR`        | Unexpected error                          |
+
+## Helper Functions
+
+### createError()
+
+Create a passkey error manually.
+
+```typescript
+import { createError } from 'supakeys'
+
+const error = createError('CANCELLED', 'User cancelled registration')
+```
+
+### getErrorMessage()
+
+Get a user-friendly message for an error code.
+
+```typescript
+import { getErrorMessage } from 'supakeys'
+
+const message = getErrorMessage('RATE_LIMITED')
+// "Too many attempts. Please wait a moment and try again."
+```
+
+### isPasskeyError()
+
+Type guard to check if an error is a PasskeyError.
+
+```typescript
+import { isPasskeyError } from 'supakeys'
+
+try {
+  // ...
+} catch (error) {
+  if (isPasskeyError(error)) {
+    console.log(error.code, error.message)
+  }
+}
+```
+
+### mapWebAuthnError()
+
+Convert native WebAuthn errors to PasskeyError.
+
+```typescript
+import { mapWebAuthnError } from 'supakeys'
+
+try {
+  await navigator.credentials.create(options)
+} catch (error) {
+  const passkeyError = mapWebAuthnError(error)
+  console.log(passkeyError.code) // e.g., 'CANCELLED'
+}
+```
+
+## Handling Patterns
+
+### Basic Error Handling
+
+```typescript
+const result = await passkeys.register({ email })
+
+if (!result.success) {
+  switch (result.error.code) {
+    case 'CANCELLED':
+      // User closed the dialog
+      break
+    case 'INVALID_STATE':
+      // Passkey already exists
+      showError('You already have a passkey on this device')
+      break
+    case 'RATE_LIMITED':
+      showError('Too many attempts. Please wait.')
+      break
+    default:
+      showError(result.error.message)
+  }
+  return
+}
+
+// Success
+```
+
+### User-Friendly Messages
+
+```typescript
+import { getErrorMessage } from 'supakeys'
+
+const result = await passkeys.signIn()
+
+if (!result.success) {
+  const userMessage = getErrorMessage(result.error.code)
+  toast.error(userMessage)
+}
+```
+
+### Retry Logic
+
+```typescript
+async function signInWithRetry(maxAttempts = 3) {
+  for (let i = 0; i < maxAttempts; i++) {
+    const result = await passkeys.signIn()
+
+    if (result.success) {
+      return result
+    }
+
+    // Don't retry user cancellation
+    if (result.error.code === 'CANCELLED') {
+      return result
+    }
+
+    // Don't retry rate limiting
+    if (result.error.code === 'RATE_LIMITED') {
+      await sleep(5000) // Wait 5 seconds
+      continue
+    }
+
+    // Retry network errors
+    if (result.error.code === 'NETWORK_ERROR') {
+      await sleep(1000)
+      continue
+    }
+
+    return result
+  }
+}
+```
+
+### Error Logging
+
+```typescript
+const result = await passkeys.register({ email })
+
+if (!result.success) {
+  // Log for debugging
+  console.error('Passkey registration failed:', {
+    code: result.error.code,
+    message: result.error.message,
+    cause: result.error.cause,
+  })
+
+  // Show user-friendly message
+  showError(getErrorMessage(result.error.code))
+}
+```
+
+## Error Recovery
+
+### INVALID_STATE (Duplicate Passkey)
+
+```typescript
+if (result.error.code === 'INVALID_STATE') {
+  // Already have a passkey on this device
+  const confirm = await showConfirm('You already have a passkey on this device. Sign in instead?')
+  if (confirm) {
+    return passkeys.signIn({ email })
+  }
+}
+```
+
+### CHALLENGE_EXPIRED
+
+```typescript
+if (result.error.code === 'CHALLENGE_EXPIRED') {
+  // Start a new registration/login flow
+  showMessage('Session expired. Please try again.')
+  return passkeys.register({ email })
+}
+```
+
+### NOT_SUPPORTED
+
+```typescript
+if (result.error.code === 'NOT_SUPPORTED') {
+  // Fall back to password auth
+  redirectTo('/login/password')
+}
+```

@@ -1,0 +1,28 @@
+{
+  "title": "Documentation",
+  "pages": [
+    "index",
+    "---Getting Started---",
+    "getting-started/what-are-passkeys",
+    "getting-started/why-supakeys",
+    "getting-started/prerequisites",
+    "---Installation---",
+    "installation/cli-setup",
+    "installation/database-setup",
+    "installation/edge-function",
+    "quick-start",
+    "---Guides---",
+    "guides/nextjs-app-router",
+    "guides/nextjs-pages-router",
+    "guides/managing-passkeys",
+    "---API Reference---",
+    "api/passkey-auth",
+    "api/support-functions",
+    "api/error-handling",
+    "api/types",
+    "---Security---",
+    "security/overview",
+    "security/best-practices",
+    "troubleshooting"
+  ]
+}

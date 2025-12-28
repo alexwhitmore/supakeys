@@ -1,0 +1,247 @@
+---
+title: Types
+description: Complete TypeScript type definitions for the supakeys client.
+---
+
+## Configuration
+
+```typescript
+interface PasskeyAuthConfig {
+  functionName?: string // Default: 'passkey-auth'
+  rpId?: string // Default: window.location.hostname
+  rpName?: string // Default: 'My App'
+  timeout?: number // Default: 60000
+}
+```
+
+## Passkey
+
+```typescript
+interface Passkey {
+  id: string
+  userId: string
+  webauthnUserId: string
+  authenticatorName: string | null
+  deviceType: 'singleDevice' | 'multiDevice'
+  backedUp: boolean
+  transports: AuthenticatorTransport[]
+  aaguid: string | null
+  createdAt: string
+  lastUsedAt: string | null
+}
+
+type AuthenticatorTransport = 'ble' | 'cable' | 'hybrid' | 'internal' | 'nfc' | 'smart-card' | 'usb'
+```
+
+## Registration
+
+```typescript
+interface RegisterPasskeyOptions {
+  email: string
+  displayName?: string
+  authenticatorName?: string
+}
+
+interface RegisterPasskeyResult {
+  success: boolean
+  passkey?: Passkey
+  error?: PasskeyError
+}
+```
+
+## Authentication
+
+```typescript
+interface SignInWithPasskeyOptions {
+  email?: string
+}
+
+interface SignInWithPasskeyResult {
+  success: boolean
+  session?: Session // Supabase Session
+  error?: PasskeyError
+}
+```
+
+## Passkey Management
+
+```typescript
+interface LinkPasskeyOptions {
+  authenticatorName?: string
+}
+
+interface LinkPasskeyResult {
+  success: boolean
+  passkey?: Passkey
+  error?: PasskeyError
+}
+
+interface ListPasskeysResult {
+  success: boolean
+  passkeys?: Passkey[]
+  error?: PasskeyError
+}
+
+interface RemovePasskeyOptions {
+  credentialId: string
+}
+
+interface RemovePasskeyResult {
+  success: boolean
+  error?: PasskeyError
+}
+
+interface UpdatePasskeyOptions {
+  credentialId: string
+  authenticatorName: string
+}
+
+interface UpdatePasskeyResult {
+  success: boolean
+  passkey?: Passkey
+  error?: PasskeyError
+}
+```
+
+## Errors
+
+```typescript
+type PasskeyErrorCode =
+  | 'NOT_SUPPORTED'
+  | 'CANCELLED'
+  | 'TIMEOUT'
+  | 'INVALID_STATE'
+  | 'SECURITY_ERROR'
+  | 'CHALLENGE_EXPIRED'
+  | 'CHALLENGE_MISMATCH'
+  | 'VERIFICATION_FAILED'
+  | 'CREDENTIAL_NOT_FOUND'
+  | 'USER_NOT_FOUND'
+  | 'CREDENTIAL_EXISTS'
+  | 'RATE_LIMITED'
+  | 'NETWORK_ERROR'
+  | 'UNKNOWN_ERROR'
+
+interface PasskeyError {
+  code: PasskeyErrorCode
+  message: string
+  cause?: unknown
+}
+```
+
+## Support
+
+```typescript
+interface PasskeySupport {
+  webauthn: boolean
+  platformAuthenticator: boolean
+  conditionalUI: boolean
+}
+```
+
+## WebAuthn Types
+
+These types mirror the WebAuthn specification:
+
+```typescript
+interface PublicKeyCredentialCreationOptionsJSON {
+  rp: {
+    name: string
+    id?: string
+  }
+  user: {
+    id: string
+    name: string
+    displayName: string
+  }
+  challenge: string
+  pubKeyCredParams: Array<{
+    type: 'public-key'
+    alg: number
+  }>
+  timeout?: number
+  excludeCredentials?: Array<{
+    type: 'public-key'
+    id: string
+    transports?: AuthenticatorTransport[]
+  }>
+  authenticatorSelection?: {
+    authenticatorAttachment?: 'platform' | 'cross-platform'
+    residentKey?: 'discouraged' | 'preferred' | 'required'
+    requireResidentKey?: boolean
+    userVerification?: 'required' | 'preferred' | 'discouraged'
+  }
+  attestation?: 'none' | 'indirect' | 'direct' | 'enterprise'
+  extensions?: Record<string, unknown>
+}
+
+interface PublicKeyCredentialRequestOptionsJSON {
+  challenge: string
+  timeout?: number
+  rpId?: string
+  allowCredentials?: Array<{
+    type: 'public-key'
+    id: string
+    transports?: AuthenticatorTransport[]
+  }>
+  userVerification?: 'required' | 'preferred' | 'discouraged'
+  extensions?: Record<string, unknown>
+}
+
+interface RegistrationResponseJSON {
+  id: string
+  rawId: string
+  response: {
+    clientDataJSON: string
+    attestationObject: string
+    transports?: AuthenticatorTransport[]
+    publicKeyAlgorithm?: number
+    publicKey?: string
+    authenticatorData?: string
+  }
+  authenticatorAttachment?: 'platform' | 'cross-platform'
+  clientExtensionResults: Record<string, unknown>
+  type: 'public-key'
+}
+
+interface AuthenticationResponseJSON {
+  id: string
+  rawId: string
+  response: {
+    clientDataJSON: string
+    authenticatorData: string
+    signature: string
+    userHandle?: string
+  }
+  authenticatorAttachment?: 'platform' | 'cross-platform'
+  clientExtensionResults: Record<string, unknown>
+  type: 'public-key'
+}
+```
+
+## Importing Types
+
+All types are exported from the main package:
+
+```typescript
+import type {
+  PasskeyAuthConfig,
+  Passkey,
+  AuthenticatorTransport,
+  RegisterPasskeyOptions,
+  RegisterPasskeyResult,
+  SignInWithPasskeyOptions,
+  SignInWithPasskeyResult,
+  LinkPasskeyOptions,
+  LinkPasskeyResult,
+  RemovePasskeyOptions,
+  RemovePasskeyResult,
+  UpdatePasskeyOptions,
+  UpdatePasskeyResult,
+  ListPasskeysResult,
+  PasskeyError,
+  PasskeyErrorCode,
+  PasskeySupport,
+  Session,
+} from 'supakeys'
+```

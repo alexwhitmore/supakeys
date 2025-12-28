@@ -1,0 +1,200 @@
+---
+title: Edge Function
+description: The passkey-auth edge function handles all WebAuthn operations server-side. It's deployed to Supabase Edge Functions (Deno runtime).
+---
+
+## TypeScript Configuration
+
+<Callout type="warn">
+**Important**: If you're using TypeScript, you must exclude the Supabase functions directory from your project's TypeScript compilation. The edge function uses Deno runtime which has different types than Node.js.
+</Callout>
+
+Update your `tsconfig.json`:
+
+```json
+{
+  "compilerOptions": {
+    // ... your existing options
+  },
+  "exclude": ["node_modules", "supabase/functions"]
+}
+```
+
+Without this, you'll see errors like:
+- `Cannot find module 'https://deno.land/...'`
+- `Cannot find module 'npm:@simplewebauthn/server'`
+
+## Deployment
+
+After running the CLI, deploy the function:
+
+```bash
+supabase functions deploy passkey-auth
+```
+
+For local development:
+
+```bash
+supabase functions serve passkey-auth --no-verify-jwt
+```
+
+## Endpoints
+
+The edge function exposes these endpoints:
+
+### Registration
+
+| Endpoint           | Description                                 |
+| ------------------ | ------------------------------------------- |
+| `/register/start`  | Generates registration options and challenge|
+| `/register/finish` | Verifies registration and stores credential |
+
+### Authentication
+
+| Endpoint        | Description                                |
+| --------------- | ------------------------------------------ |
+| `/login/start`  | Generates authentication options           |
+| `/login/finish` | Verifies authentication and creates session|
+
+### Passkey Management
+
+| Endpoint           | Description                        |
+| ------------------ | ---------------------------------- |
+| `/passkeys/list`   | Lists user's passkeys (requires auth)  |
+| `/passkeys/update` | Updates passkey name (requires auth)   |
+| `/passkeys/remove` | Removes a passkey (requires auth)      |
+
+## Security Features
+
+### Challenge Management
+
+- Challenges are cryptographically random (32 bytes)
+- 5-minute TTL (time-to-live)
+- Single-use (deleted after verification)
+- Type-bound (registration vs authentication)
+
+### Rate Limiting
+
+- 5 requests per minute per IP address
+- 10 requests per minute per email address
+- Automatic window reset
+
+### Origin Verification
+
+- RP ID must match request origin
+- Prevents replay attacks from other domains
+
+### Audit Logging
+
+All events are logged:
+
+- `registration_started`
+- `registration_completed`
+- `registration_failed`
+- `authentication_started`
+- `authentication_completed`
+- `authentication_failed`
+- `passkey_removed`
+
+## Configuration
+
+The edge function accepts configuration via the request body:
+
+```typescript
+{
+  endpoint: '/register/start',
+  data: {
+    email: 'user@example.com',
+    rpId: 'example.com',
+    rpName: 'My App'
+  }
+}
+```
+
+### Environment Variables
+
+Set these in your Supabase project:
+
+| Variable                    | Description        |
+| --------------------------- | ------------------ |
+| `SUPABASE_URL`              | Automatically set  |
+| `SUPABASE_SERVICE_ROLE_KEY` | Automatically set  |
+
+## Verifying Deployment
+
+After deploying, verify everything is working:
+
+### 1. Check the Dashboard
+
+Visit your [Supabase Dashboard](https://supabase.com/dashboard) → Functions → `passkey-auth` should be listed.
+
+### 2. Check Logs
+
+```bash
+supabase functions logs passkey-auth --tail
+```
+
+### 3. Test with cURL
+
+```bash
+curl -X POST 'https://YOUR_PROJECT_REF.supabase.co/functions/v1/passkey-auth' \
+  -H 'Content-Type: application/json' \
+  -H 'apikey: YOUR_ANON_KEY' \
+  -d '{
+    "endpoint": "/register/start",
+    "data": {
+      "email": "test@example.com",
+      "rpId": "localhost",
+      "rpName": "Test App"
+    }
+  }'
+```
+
+You should receive a response like:
+
+```json
+{
+  "success": true,
+  "data": {
+    "options": { ... },
+    "challengeId": "uuid-here"
+  }
+}
+```
+
+### Common Deployment Issues
+
+| Error | Cause | Solution |
+|-------|-------|----------|
+| 404 Not Found | Function not deployed | Run `supabase functions deploy passkey-auth` |
+| 500 Internal Error | Database not set up | Run `supabase db push` first |
+| CORS error | Missing headers | Redeploy - function includes CORS headers |
+
+## Local Development
+
+For local testing, start the function without JWT verification:
+
+```bash
+supabase functions serve passkey-auth --no-verify-jwt
+```
+
+The function will be available at:
+
+```
+http://localhost:54321/functions/v1/passkey-auth
+```
+
+## Customization
+
+The edge function is generated in your project at:
+
+```
+supabase/functions/passkey-auth/index.ts
+```
+
+You can customize:
+
+- Rate limit thresholds
+- Challenge TTL
+- Audit log fields
+- Response formatting

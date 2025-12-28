@@ -1,0 +1,35 @@
+---
+title: Introduction
+description: Add passwordless passkey authentication to your Supabase project in minutes. Built on the WebAuthn standard for maximum security.
+---
+
+## Features
+
+- **Passwordless Authentication** - No more passwords to remember or steal
+- **Biometric Support** - Touch ID, Face ID, Windows Hello, and more
+- **Cross-Device Sync** - Passkeys sync across your devices via iCloud/Google
+- **Supabase Integration** - Works seamlessly with Supabase Auth
+- **TypeScript First** - Full type safety out of the box
+- **Secure by Default** - Rate limiting, audit logging, and security best practices
+
+## Quick Install
+
+```bash
+npm install supakeys
+npx supakeys init
+```
+
+## Quick Example
+
+```typescript
+import { createClient } from '@supabase/supabase-js'
+import { createPasskeyAuth } from 'supakeys'
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+const passkeys = createPasskeyAuth(supabase)
+
+const { success, session, error } = await passkeys.signIn()
+if (success) {
+  console.log('Signed in!', session)
+}
+```
