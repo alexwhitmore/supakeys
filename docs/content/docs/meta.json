@@ -12,8 +12,6 @@
     "installation/edge-function",
     "quick-start",
     "---Guides---",
-    "guides/nextjs-app-router",
-    "guides/nextjs-pages-router",
     "guides/managing-passkeys",
     "---API Reference---",
     "api/passkey-auth",

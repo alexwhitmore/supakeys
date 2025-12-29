@@ -1,6 +1,6 @@
 ---
 title: Quick Start
-description: Get passkey authentication working in your Supabase project in 5 minutes.
+description: Get passkey authentication working in your Supabase project in 5 minutes. This quickstart uses Next.js and Tailwind as an example, but the Supabase setup is the same for all frameworks.
 ---
 
 ## Prerequisites
@@ -56,7 +56,7 @@ supabase db push
 supabase functions deploy passkey-auth
 ```
 
-## 6. Verify Deployment
+## 6. Verify Deployment (optional)
 
 Find your project URL and anon key in the Supabase dashboard under Settings > API.
 
@@ -96,7 +96,7 @@ const passkeys = createPasskeyAuth(supabase, {
 })
 ```
 
-### Check Browser Support
+### Check Browser Support (optional)
 
 ```typescript
 const support = await passkeys.isSupported()
@@ -158,10 +158,7 @@ Create `lib/supabase.ts`:
 import { createClient } from '@supabase/supabase-js'
 import { createPasskeyAuth } from 'supakeys'
 
-export const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+export const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
 
 export const passkeys = createPasskeyAuth(supabase, {
   rpId: typeof window !== 'undefined' ? window.location.hostname : 'localhost',
@@ -262,94 +259,71 @@ export default function Home() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col gap-4 py-16 px-8">
-        <h1 className="text-2xl font-bold mb-4">Passkey Authentication</h1>
+    <div className='flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-black'>
+      <main className='flex min-h-screen w-full max-w-3xl flex-col gap-4 py-16 px-8'>
+        <h1 className='text-2xl font-bold mb-4'>Passkey Authentication</h1>
 
-        <section className="border p-4 rounded-lg">
-          <h2 className="text-lg font-semibold mb-2">Authentication</h2>
+        <section className='border p-4 rounded-lg'>
+          <h2 className='text-lg font-semibold mb-2'>Authentication</h2>
           <input
-            type="email"
+            type='email'
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="your@email.com"
-            className="border px-3 py-2 rounded-md mr-2 mb-2"
+            placeholder='your@email.com'
+            className='border px-3 py-2 rounded-md mr-2 mb-2'
           />
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={handleRegister}
-              className="bg-blue-500 text-white px-4 py-2 rounded-md"
-            >
+          <div className='flex flex-wrap gap-2'>
+            <button onClick={handleRegister} className='bg-blue-500 text-white px-4 py-2 rounded-md'>
               Register
             </button>
-            <button
-              onClick={() => handleSignIn(email)}
-              className="bg-green-500 text-white px-4 py-2 rounded-md"
-            >
+            <button onClick={() => handleSignIn(email)} className='bg-green-500 text-white px-4 py-2 rounded-md'>
               Sign In (with email)
             </button>
-            <button
-              onClick={() => handleSignIn()}
-              className="bg-green-600 text-white px-4 py-2 rounded-md"
-            >
+            <button onClick={() => handleSignIn()} className='bg-green-600 text-white px-4 py-2 rounded-md'>
               Sign In (discoverable)
             </button>
           </div>
         </section>
 
-        <section className="border p-4 rounded-lg">
-          <h2 className="text-lg font-semibold mb-2">Session</h2>
-          <div className="flex flex-wrap gap-2 mb-2">
-            <button
-              onClick={handleCheckSession}
-              className="bg-gray-500 text-white px-4 py-2 rounded-md"
-            >
+        <section className='border p-4 rounded-lg'>
+          <h2 className='text-lg font-semibold mb-2'>Session</h2>
+          <div className='flex flex-wrap gap-2 mb-2'>
+            <button onClick={handleCheckSession} className='bg-gray-500 text-white px-4 py-2 rounded-md'>
               Check Session
             </button>
-            <button
-              onClick={handleSignOut}
-              className="bg-red-500 text-white px-4 py-2 rounded-md"
-            >
+            <button onClick={handleSignOut} className='bg-red-500 text-white px-4 py-2 rounded-md'>
               Sign Out
             </button>
           </div>
           {session && (
-            <pre className="bg-gray-100 dark:bg-gray-800 p-2 rounded text-xs overflow-auto">
+            <pre className='bg-gray-100 dark:bg-gray-800 p-2 rounded text-xs overflow-auto'>
               {JSON.stringify(session, null, 2)}
             </pre>
           )}
         </section>
 
-        <section className="border p-4 rounded-lg">
-          <h2 className="text-lg font-semibold mb-2">Passkey Management (requires login)</h2>
-          <button
-            onClick={handleListPasskeys}
-            className="bg-purple-500 text-white px-4 py-2 rounded-md mb-2"
-          >
+        <section className='border p-4 rounded-lg'>
+          <h2 className='text-lg font-semibold mb-2'>Passkey Management (requires login)</h2>
+          <button onClick={handleListPasskeys} className='bg-purple-500 text-white px-4 py-2 rounded-md mb-2'>
             List Passkeys
           </button>
           {passkeysList.length > 0 && (
-            <div className="space-y-2">
+            <div className='space-y-2'>
               {passkeysList.map((pk) => (
-                <div
-                  key={pk.id}
-                  className="bg-gray-100 dark:bg-gray-800 p-2 rounded flex justify-between items-center"
-                >
+                <div key={pk.id} className='bg-gray-100 dark:bg-gray-800 p-2 rounded flex justify-between items-center'>
                   <div>
-                    <div className="font-medium">{pk.authenticatorName || 'Unnamed'}</div>
-                    <div className="text-xs text-gray-500">{pk.id}</div>
+                    <div className='font-medium'>{pk.authenticatorName || 'Unnamed'}</div>
+                    <div className='text-xs text-gray-500'>{pk.id}</div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className='flex gap-2'>
                     <button
                       onClick={() => handleUpdatePasskey(pk.id, `Updated ${Date.now()}`)}
-                      className="bg-yellow-500 text-white px-2 py-1 rounded text-sm"
-                    >
+                      className='bg-yellow-500 text-white px-2 py-1 rounded text-sm'>
                       Rename
                     </button>
                     <button
                       onClick={() => handleRemovePasskey(pk.id)}
-                      className="bg-red-500 text-white px-2 py-1 rounded text-sm"
-                    >
+                      className='bg-red-500 text-white px-2 py-1 rounded text-sm'>
                       Remove
                     </button>
                   </div>

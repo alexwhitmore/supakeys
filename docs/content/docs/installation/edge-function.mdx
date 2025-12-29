@@ -5,8 +5,9 @@ description: The passkey-auth edge function handles all WebAuthn operations serv
 
 ## TypeScript Configuration
 
-<Callout type="warn">
-**Important**: If you're using TypeScript, you must exclude the Supabase functions directory from your project's TypeScript compilation. The edge function uses Deno runtime which has different types than Node.js.
+<Callout type='warn'>
+  **Important**: If you're using TypeScript, you can exclude the Supabase functions directory from your project's
+  TypeScript compilation. The edge function uses Deno runtime which has different types than Node.js.
 </Callout>
 
 Update your `tsconfig.json`:
@@ -21,6 +22,7 @@ Update your `tsconfig.json`:
 ```
 
 Without this, you'll see errors like:
+
 - `Cannot find module 'https://deno.land/...'`
 - `Cannot find module 'npm:@simplewebauthn/server'`
 
@@ -44,25 +46,25 @@ The edge function exposes these endpoints:
 
 ### Registration
 
-| Endpoint           | Description                                 |
-| ------------------ | ------------------------------------------- |
-| `/register/start`  | Generates registration options and challenge|
-| `/register/finish` | Verifies registration and stores credential |
+| Endpoint           | Description                                  |
+| ------------------ | -------------------------------------------- |
+| `/register/start`  | Generates registration options and challenge |
+| `/register/finish` | Verifies registration and stores credential  |
 
 ### Authentication
 
-| Endpoint        | Description                                |
-| --------------- | ------------------------------------------ |
-| `/login/start`  | Generates authentication options           |
-| `/login/finish` | Verifies authentication and creates session|
+| Endpoint        | Description                                 |
+| --------------- | ------------------------------------------- |
+| `/login/start`  | Generates authentication options            |
+| `/login/finish` | Verifies authentication and creates session |
 
 ### Passkey Management
 
-| Endpoint           | Description                        |
-| ------------------ | ---------------------------------- |
-| `/passkeys/list`   | Lists user's passkeys (requires auth)  |
-| `/passkeys/update` | Updates passkey name (requires auth)   |
-| `/passkeys/remove` | Removes a passkey (requires auth)      |
+| Endpoint           | Description                           |
+| ------------------ | ------------------------------------- |
+| `/passkeys/list`   | Lists user's passkeys (requires auth) |
+| `/passkeys/update` | Updates passkey name (requires auth)  |
+| `/passkeys/remove` | Removes a passkey (requires auth)     |
 
 ## Security Features
 
@@ -115,10 +117,10 @@ The edge function accepts configuration via the request body:
 
 Set these in your Supabase project:
 
-| Variable                    | Description        |
-| --------------------------- | ------------------ |
-| `SUPABASE_URL`              | Automatically set  |
-| `SUPABASE_SERVICE_ROLE_KEY` | Automatically set  |
+| Variable                    | Description       |
+| --------------------------- | ----------------- |
+| `SUPABASE_URL`              | Automatically set |
+| `SUPABASE_SERVICE_ROLE_KEY` | Automatically set |
 
 ## Verifying Deployment
 
@@ -164,11 +166,11 @@ You should receive a response like:
 
 ### Common Deployment Issues
 
-| Error | Cause | Solution |
-|-------|-------|----------|
-| 404 Not Found | Function not deployed | Run `supabase functions deploy passkey-auth` |
-| 500 Internal Error | Database not set up | Run `supabase db push` first |
-| CORS error | Missing headers | Redeploy - function includes CORS headers |
+| Error              | Cause                 | Solution                                     |
+| ------------------ | --------------------- | -------------------------------------------- |
+| 404 Not Found      | Function not deployed | Run `supabase functions deploy passkey-auth` |
+| 500 Internal Error | Database not set up   | Run `supabase db push` first                 |
+| CORS error         | Missing headers       | Redeploy - function includes CORS headers    |
 
 ## Local Development
 
