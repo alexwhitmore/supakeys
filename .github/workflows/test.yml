@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 jobs:
-  test:
+  unit-tests:
     runs-on: ubuntu-latest
 
     steps:
@@ -27,24 +27,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v1
-        with:
-          version: latest
-
-      - name: Start Supabase
-        run: supabase start
-
-      - name: Start Edge Functions
-        run: |
-          supabase functions serve passkey-auth --no-verify-jwt &
-          sleep 5
-
-      - name: Run tests
-        run: pnpm test
+      - name: Run unit tests
+        run: pnpm test tests/unit tests/client
 
       - name: Run tests with coverage
-        run: pnpm test:coverage
+        run: pnpm test:coverage tests/unit tests/client
 
       - name: Upload coverage reports
         uses: codecov/codecov-action@v3
@@ -52,9 +39,8 @@ jobs:
           files: ./coverage/coverage-final.json
           fail_ci_if_error: false
 
-      - name: Stop Supabase
-        if: always()
-        run: supabase stop
+  # Integration tests require Supabase + Docker and are run locally
+  # To run integration tests locally: pnpm test -- --testPathPattern="tests/integration|tests/security"
 
   lint:
     runs-on: ubuntu-latest

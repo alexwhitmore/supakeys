@@ -1,4 +1,4 @@
-export { PasskeyAuth, createPasskeyAuth } from './lib/passkey-auth';
+export { PasskeyAuth, createPasskeyAuth } from "./lib/passkey-auth";
 
 export {
   isWebAuthnSupported,
@@ -7,9 +7,14 @@ export {
   getPasskeySupport,
   isSecureContext,
   getUnsupportedReason,
-} from './lib/support';
+} from "./lib/support";
 
-export { createError, mapWebAuthnError, getErrorMessage, isPasskeyError } from './lib/errors';
+export {
+  createError,
+  mapWebAuthnError,
+  getErrorMessage,
+  isPasskeyError,
+} from "./lib/errors";
 
 export type {
   PasskeyAuthConfig,
@@ -34,4 +39,4 @@ export type {
   RegistrationResponseJSON,
   AuthenticationResponseJSON,
   Session,
-} from './types';
+} from "./types";

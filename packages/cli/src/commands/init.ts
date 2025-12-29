@@ -1,8 +1,8 @@
-import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'fs';
-import { join } from 'path';
-import chalk from 'chalk';
-import ora from 'ora';
-import enquirer from 'enquirer';
+import { existsSync, mkdirSync, writeFileSync, readFileSync } from "fs";
+import { join } from "path";
+import chalk from "chalk";
+import ora from "ora";
+import enquirer from "enquirer";
 
 const { prompt } = enquirer;
 
@@ -21,11 +21,14 @@ interface FrameworkInfo {
 
 function detectFramework(): FrameworkInfo {
   const frameworks: { name: string; files: string[] }[] = [
-    { name: 'Next.js', files: ['next.config.js', 'next.config.mjs', 'next.config.ts'] },
-    { name: 'Remix', files: ['remix.config.js', 'remix.config.ts'] },
-    { name: 'SvelteKit', files: ['svelte.config.js'] },
-    { name: 'Nuxt', files: ['nuxt.config.js', 'nuxt.config.ts'] },
-    { name: 'Astro', files: ['astro.config.mjs', 'astro.config.js'] },
+    {
+      name: "Next.js",
+      files: ["next.config.js", "next.config.mjs", "next.config.ts"],
+    },
+    { name: "Remix", files: ["remix.config.js", "remix.config.ts"] },
+    { name: "SvelteKit", files: ["svelte.config.js"] },
+    { name: "Nuxt", files: ["nuxt.config.js", "nuxt.config.ts"] },
+    { name: "Astro", files: ["astro.config.mjs", "astro.config.js"] },
   ];
 
   for (const fw of frameworks) {
@@ -36,27 +39,27 @@ function detectFramework(): FrameworkInfo {
     }
   }
 
-  if (existsSync('package.json')) {
+  if (existsSync("package.json")) {
     try {
-      const pkg = JSON.parse(readFileSync('package.json', 'utf-8'));
+      const pkg = JSON.parse(readFileSync("package.json", "utf-8"));
       if (pkg.dependencies?.react || pkg.devDependencies?.react) {
-        return { name: 'React', detected: true };
+        return { name: "React", detected: true };
       }
       if (pkg.dependencies?.vue || pkg.devDependencies?.vue) {
-        return { name: 'Vue', detected: true };
+        return { name: "Vue", detected: true };
       }
     } catch {}
   }
 
-  return { name: 'Unknown', detected: false };
+  return { name: "Unknown", detected: false };
 }
 
 function checkSupabaseProject(dir: string): boolean {
-  return existsSync(join(dir, 'config.toml'));
+  return existsSync(join(dir, "config.toml"));
 }
 
 export async function initCommand(options: InitOptions) {
-  console.log(chalk.cyan('\n🔐 Initializing passkey authentication...\n'));
+  console.log(chalk.cyan("\n🔐 Initializing passkey authentication...\n"));
 
   const spinner = ora();
   const framework = detectFramework();
@@ -70,14 +73,18 @@ export async function initCommand(options: InitOptions) {
 
     if (!isSupabaseProject && !existsSync(options.dir)) {
       const { createDir } = await prompt<{ createDir: boolean }>({
-        type: 'confirm',
-        name: 'createDir',
+        type: "confirm",
+        name: "createDir",
         message: `Supabase directory not found at ${options.dir}. Create it?`,
         initial: true,
       });
 
       if (!createDir) {
-        console.log(chalk.yellow('\nAborted. Run `supabase init` first to set up Supabase.'));
+        console.log(
+          chalk.yellow(
+            "\nAborted. Run `supabase init` first to set up Supabase.",
+          ),
+        );
         process.exit(1);
       }
 
@@ -88,33 +95,39 @@ export async function initCommand(options: InitOptions) {
 
     const config = await prompt<{ rpId: string; rpName: string }>([
       {
-        type: 'input',
-        name: 'rpId',
-        message: 'Relying Party ID (your domain):',
-        initial: 'localhost',
+        type: "input",
+        name: "rpId",
+        message: "Relying Party ID (your domain):",
+        initial: "localhost",
       },
       {
-        type: 'input',
-        name: 'rpName',
-        message: 'Application name:',
-        initial: framework.detected ? framework.name + ' App' : 'My App',
+        type: "input",
+        name: "rpName",
+        message: "Application name:",
+        initial: framework.detected ? framework.name + " App" : "My App",
       },
     ]);
 
     if (options.dryRun) {
-      console.log(chalk.yellow('\n[Dry Run] Would create the following:\n'));
+      console.log(chalk.yellow("\n[Dry Run] Would create the following:\n"));
     }
 
     if (!options.skipMigration) {
-      spinner.start('Setting up database migrations...');
+      spinner.start("Setting up database migrations...");
 
-      const migrationsDir = join(options.dir, 'migrations');
+      const migrationsDir = join(options.dir, "migrations");
       if (!options.dryRun && !existsSync(migrationsDir)) {
         mkdirSync(migrationsDir, { recursive: true });
       }
 
-      const timestamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0];
-      const migrationFile = join(migrationsDir, `${timestamp}_passkey_auth.sql`);
+      const timestamp = new Date()
+        .toISOString()
+        .replace(/[-:]/g, "")
+        .split(".")[0];
+      const migrationFile = join(
+        migrationsDir,
+        `${timestamp}_passkey_auth.sql`,
+      );
 
       if (options.dryRun) {
         spinner.info(`Would create: ${chalk.dim(migrationFile)}`);
@@ -125,14 +138,14 @@ export async function initCommand(options: InitOptions) {
     }
 
     if (!options.skipFunction) {
-      spinner.start('Setting up edge function...');
+      spinner.start("Setting up edge function...");
 
-      const functionsDir = join(options.dir, 'functions', 'passkey-auth');
+      const functionsDir = join(options.dir, "functions", "passkey-auth");
       if (!options.dryRun && !existsSync(functionsDir)) {
         mkdirSync(functionsDir, { recursive: true });
       }
 
-      const functionFile = join(functionsDir, 'index.ts');
+      const functionFile = join(functionsDir, "index.ts");
 
       if (options.dryRun) {
         spinner.info(`Would create: ${chalk.dim(functionFile)}`);
@@ -143,23 +156,23 @@ export async function initCommand(options: InitOptions) {
     }
 
     if (options.dryRun) {
-      console.log(chalk.yellow('\n[Dry Run] No files were created.\n'));
+      console.log(chalk.yellow("\n[Dry Run] No files were created.\n"));
       return;
     }
 
-    console.log(chalk.green('\n✅ Passkey authentication initialized!\n'));
+    console.log(chalk.green("\n✅ Passkey authentication initialized!\n"));
 
-    console.log(chalk.bold('Next steps:\n'));
-    console.log(`  ${chalk.cyan('1.')} Apply database migrations:`);
+    console.log(chalk.bold("Next steps:\n"));
+    console.log(`  ${chalk.cyan("1.")} Apply database migrations:`);
     console.log(chalk.dim(`     supabase db push\n`));
 
-    console.log(`  ${chalk.cyan('2.')} Deploy the edge function:`);
+    console.log(`  ${chalk.cyan("2.")} Deploy the edge function:`);
     console.log(chalk.dim(`     supabase functions deploy passkey-auth\n`));
 
-    console.log(`  ${chalk.cyan('3.')} Install the client library:`);
+    console.log(`  ${chalk.cyan("3.")} Install the client library:`);
     console.log(chalk.dim(`     npm install supakeys\n`));
 
-    console.log(`  ${chalk.cyan('4.')} Initialize in your app:`);
+    console.log(`  ${chalk.cyan("4.")} Initialize in your app:`);
     console.log(
       chalk.dim(`
      import { createPasskeyAuth } from 'supakeys';
@@ -177,13 +190,15 @@ export async function initCommand(options: InitOptions) {
 
      // Authenticate with passkey
      const { session, error } = await passkeyAuth.authenticate('user@example.com');
-`)
+`),
     );
 
-    console.log(chalk.dim('📚 Docs: https://github.com/alexwhitmore/supakeys\n'));
+    console.log(
+      chalk.dim("📚 Docs: https://github.com/alexwhitmore/supakeys\n"),
+    );
   } catch (error) {
-    spinner.fail('Failed to initialize');
-    if (error instanceof Error && error.message !== '') {
+    spinner.fail("Failed to initialize");
+    if (error instanceof Error && error.message !== "") {
       console.error(chalk.red(error.message));
     }
     process.exit(1);

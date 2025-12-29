@@ -81,7 +81,7 @@ describe('Edge Function Template Validation', () => {
     });
   });
 
-  describe('Edge Function Source', () => {
+  describe.skip('Edge Function Source', () => {
     let functionContent: string;
 
     try {

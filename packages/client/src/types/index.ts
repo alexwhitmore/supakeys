@@ -1,13 +1,13 @@
-import type { SupabaseClient, Session } from '@supabase/supabase-js';
+import type { SupabaseClient, Session } from "@supabase/supabase-js";
 
 export type AuthenticatorTransport =
-  | 'ble'
-  | 'cable'
-  | 'hybrid'
-  | 'internal'
-  | 'nfc'
-  | 'smart-card'
-  | 'usb';
+  | "ble"
+  | "cable"
+  | "hybrid"
+  | "internal"
+  | "nfc"
+  | "smart-card"
+  | "usb";
 
 export interface PublicKeyCredentialCreationOptionsJSON {
   rp: {
@@ -21,22 +21,22 @@ export interface PublicKeyCredentialCreationOptionsJSON {
   };
   challenge: string;
   pubKeyCredParams: Array<{
-    type: 'public-key';
+    type: "public-key";
     alg: number;
   }>;
   timeout?: number;
   excludeCredentials?: Array<{
-    type: 'public-key';
+    type: "public-key";
     id: string;
     transports?: AuthenticatorTransport[];
   }>;
   authenticatorSelection?: {
-    authenticatorAttachment?: 'platform' | 'cross-platform';
-    residentKey?: 'discouraged' | 'preferred' | 'required';
+    authenticatorAttachment?: "platform" | "cross-platform";
+    residentKey?: "discouraged" | "preferred" | "required";
     requireResidentKey?: boolean;
-    userVerification?: 'required' | 'preferred' | 'discouraged';
+    userVerification?: "required" | "preferred" | "discouraged";
   };
-  attestation?: 'none' | 'indirect' | 'direct' | 'enterprise';
+  attestation?: "none" | "indirect" | "direct" | "enterprise";
   extensions?: Record<string, unknown>;
 }
 
@@ -45,11 +45,11 @@ export interface PublicKeyCredentialRequestOptionsJSON {
   timeout?: number;
   rpId?: string;
   allowCredentials?: Array<{
-    type: 'public-key';
+    type: "public-key";
     id: string;
     transports?: AuthenticatorTransport[];
   }>;
-  userVerification?: 'required' | 'preferred' | 'discouraged';
+  userVerification?: "required" | "preferred" | "discouraged";
   extensions?: Record<string, unknown>;
 }
 
@@ -64,9 +64,9 @@ export interface RegistrationResponseJSON {
     publicKey?: string;
     authenticatorData?: string;
   };
-  authenticatorAttachment?: 'platform' | 'cross-platform';
+  authenticatorAttachment?: "platform" | "cross-platform";
   clientExtensionResults: Record<string, unknown>;
-  type: 'public-key';
+  type: "public-key";
 }
 
 export interface AuthenticationResponseJSON {
@@ -78,9 +78,9 @@ export interface AuthenticationResponseJSON {
     signature: string;
     userHandle?: string;
   };
-  authenticatorAttachment?: 'platform' | 'cross-platform';
+  authenticatorAttachment?: "platform" | "cross-platform";
   clientExtensionResults: Record<string, unknown>;
-  type: 'public-key';
+  type: "public-key";
 }
 
 export interface PasskeyAuthConfig {
@@ -102,7 +102,7 @@ export interface Passkey {
   userId: string;
   webauthnUserId: string;
   authenticatorName: string | null;
-  deviceType: 'singleDevice' | 'multiDevice';
+  deviceType: "singleDevice" | "multiDevice";
   backedUp: boolean;
   transports: AuthenticatorTransport[];
   aaguid: string | null;
@@ -192,21 +192,21 @@ export interface ListPasskeysResult {
 }
 
 export type PasskeyErrorCode =
-  | 'NOT_SUPPORTED'
-  | 'INVALID_INPUT'
-  | 'CANCELLED'
-  | 'TIMEOUT'
-  | 'INVALID_STATE'
-  | 'SECURITY_ERROR'
-  | 'CHALLENGE_EXPIRED'
-  | 'CHALLENGE_MISMATCH'
-  | 'VERIFICATION_FAILED'
-  | 'CREDENTIAL_NOT_FOUND'
-  | 'USER_NOT_FOUND'
-  | 'CREDENTIAL_EXISTS'
-  | 'RATE_LIMITED'
-  | 'NETWORK_ERROR'
-  | 'UNKNOWN_ERROR';
+  | "NOT_SUPPORTED"
+  | "INVALID_INPUT"
+  | "CANCELLED"
+  | "TIMEOUT"
+  | "INVALID_STATE"
+  | "SECURITY_ERROR"
+  | "CHALLENGE_EXPIRED"
+  | "CHALLENGE_MISMATCH"
+  | "VERIFICATION_FAILED"
+  | "CREDENTIAL_NOT_FOUND"
+  | "USER_NOT_FOUND"
+  | "CREDENTIAL_EXISTS"
+  | "RATE_LIMITED"
+  | "NETWORK_ERROR"
+  | "UNKNOWN_ERROR";
 
 export interface PasskeyError {
   code: PasskeyErrorCode;
@@ -215,13 +215,13 @@ export interface PasskeyError {
 }
 
 export type PasskeyEndpoint =
-  | '/register/start'
-  | '/register/finish'
-  | '/login/start'
-  | '/login/finish'
-  | '/passkeys/list'
-  | '/passkeys/remove'
-  | '/passkeys/update';
+  | "/register/start"
+  | "/register/finish"
+  | "/login/start"
+  | "/login/finish"
+  | "/passkeys/list"
+  | "/passkeys/remove"
+  | "/passkeys/update";
 
 export interface EdgeFunctionRequest {
   endpoint: PasskeyEndpoint;

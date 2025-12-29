@@ -1,11 +1,11 @@
-import type { PasskeySupport } from '../types';
+import type { PasskeySupport } from "../types";
 
 export function isWebAuthnSupported(): boolean {
   return (
-    typeof window !== 'undefined' &&
-    typeof window.PublicKeyCredential !== 'undefined' &&
-    typeof window.navigator !== 'undefined' &&
-    typeof window.navigator.credentials !== 'undefined'
+    typeof window !== "undefined" &&
+    typeof window.PublicKeyCredential !== "undefined" &&
+    typeof window.navigator !== "undefined" &&
+    typeof window.navigator.credentials !== "undefined"
   );
 }
 
@@ -31,7 +31,7 @@ export async function isConditionalUISupported(): Promise<boolean> {
       isConditionalMediationAvailable?: () => Promise<boolean>;
     };
 
-    if (typeof pubKeyCred.isConditionalMediationAvailable === 'function') {
+    if (typeof pubKeyCred.isConditionalMediationAvailable === "function") {
       return await pubKeyCred.isConditionalMediationAvailable();
     }
     return false;
@@ -64,23 +64,23 @@ export async function getPasskeySupport(): Promise<PasskeySupport> {
 }
 
 export function isSecureContext(): boolean {
-  if (typeof window === 'undefined') {
+  if (typeof window === "undefined") {
     return false;
   }
   return window.isSecureContext === true;
 }
 
 export function getUnsupportedReason(): string | null {
-  if (typeof window === 'undefined') {
-    return 'Passkeys are only available in browser environments.';
+  if (typeof window === "undefined") {
+    return "Passkeys are only available in browser environments.";
   }
 
   if (!isSecureContext()) {
-    return 'Passkeys require a secure connection (HTTPS).';
+    return "Passkeys require a secure connection (HTTPS).";
   }
 
   if (!isWebAuthnSupported()) {
-    return 'Your browser does not support passkeys. Please update to a modern browser.';
+    return "Your browser does not support passkeys. Please update to a modern browser.";
   }
 
   return null;
