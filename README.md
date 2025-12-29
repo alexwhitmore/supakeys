@@ -158,7 +158,7 @@ const { success, session } = await passkeys.signIn({
 
 ## Documentation
 
-Full documentation available at [supakeys.dev](https://supakeys.dev)
+Full documentation available at [supakeys.com](https://supakeys.com)
 
 ## Credits
 

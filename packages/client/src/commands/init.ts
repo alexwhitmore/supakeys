@@ -190,7 +190,7 @@ export async function initCommand(options: InitOptions) {
 `),
     );
 
-    console.log(chalk.dim("Docs: https://supakeys.dev\n"));
+    console.log(chalk.dim("Docs: https://supakeys.com\n"));
   } catch (error) {
     spinner.fail("Failed to initialize");
     if (error instanceof Error && error.message !== "") {
